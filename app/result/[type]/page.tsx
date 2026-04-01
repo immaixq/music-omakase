@@ -201,6 +201,8 @@ export default function ResultPage() {
               <CurrentStateReveal
                 state={result.currentState}
                 accentColor={archetype.color}
+                archetype={result.archetype}
+                listenerProfile={result.listenerProfile}
               />
             </motion.div>
           )}
