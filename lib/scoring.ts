@@ -98,10 +98,8 @@ export function shannonEntropy(counts: number[]): number {
 
 export function extractGenreCounts(artists: SpotifyArtist[]): number[] {
   const counts: Record<string, number> = {}
-  for (const artist of artists) {
-    for (const genre of artist.genres) {
-      counts[genre] = (counts[genre] ?? 0) + 1
-    }
+  for (const genre of safeGenres(artists)) {
+    counts[genre] = (counts[genre] ?? 0) + 1
   }
   return Object.values(counts)
 }
@@ -122,19 +120,25 @@ const VALENCE_LOW  = ['emo','post-punk','gothic','doom','black metal','dark','me
 const ACOUSTIC_HIGH = ['acoustic','folk','singer-songwriter','country','bluegrass','americana',
   'fingerstyle','classical','flamenco','bossa nova','unplugged']
 
+function safeGenres(artists: SpotifyArtist[]): string[] {
+  return artists
+    .flatMap(a => Array.isArray(a.genres) ? a.genres : [])
+    .filter((g): g is string => typeof g === 'string' && g.length > 0)
+}
+
 function genreMatchScore(genre: string, keywords: string[]): number {
   const g = genre.toLowerCase()
   return keywords.some(k => g.includes(k)) ? 1 : 0
 }
 
 interface InferredFeatures {
-  energy:      number  // 0–1
-  valence:     number  // 0–1
-  acousticness: number // 0–1
+  energy:       number  // 0–1
+  valence:      number  // 0–1
+  acousticness: number  // 0–1
 }
 
 function inferFeaturesFromGenres(artists: SpotifyArtist[]): InferredFeatures {
-  const allGenres: string[] = artists.flatMap(a => a.genres)
+  const allGenres = safeGenres(artists)
   if (allGenres.length === 0) return { energy: 0.5, valence: 0.5, acousticness: 0.3 }
 
   const energyScores  = allGenres.map(g => {
@@ -217,7 +221,7 @@ export function computeListenerProfile(
   const loyalty      = clamp100(union > 0 ? (intersection / union) * 100 * 3.5 : 50)
 
   // Emotional range — genre diversity as a proxy (more genres = wider palette)
-  const allGenres = new Set(topArtists.flatMap(a => a.genres))
+  const allGenres = new Set(safeGenres(topArtists))
   const emotionalRange = clamp100(Math.min(allGenres.size * 3.5, 99))
 
   // Intensity — popularity inversion + genre energy score
@@ -346,10 +350,8 @@ export function classify(
   // Top artist names + top genres
   const topArtistNames = topArtists.slice(0, 5).map(a => a.name)
   const genreFreq: Record<string, number> = {}
-  for (const artist of topArtists) {
-    for (const genre of artist.genres) {
-      genreFreq[genre] = (genreFreq[genre] ?? 0) + 1
-    }
+  for (const genre of safeGenres(topArtists)) {
+    genreFreq[genre] = (genreFreq[genre] ?? 0) + 1
   }
   const topGenres = Object.entries(genreFreq)
     .sort(([, a], [, b]) => b - a)

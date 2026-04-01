@@ -7,8 +7,10 @@ export default function DebugPage() {
   const [authUrl,       setAuthUrl]       = useState<string | null>(null)
   const [apiResults,    setApiResults]    = useState<unknown[] | null>(null)
   const [apiLoading,    setApiLoading]    = useState(false)
-  const [analyzeSteps,  setAnalyzeSteps]  = useState<AnalyzeStep[] | null>(null)
+  const [analyzeSteps,   setAnalyzeSteps]   = useState<AnalyzeStep[] | null>(null)
   const [analyzeLoading, setAnalyzeLoading] = useState(false)
+  const [geminiResult,   setGeminiResult]   = useState<{ok: boolean; text?: string; error?: string} | null>(null)
+  const [geminiLoading,  setGeminiLoading]  = useState(false)
 
   const clientId    = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID
   const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI
@@ -18,6 +20,35 @@ export default function DebugPage() {
     const { challenge } = await generatePKCE()
     const url = buildAuthUrl(challenge, 'debug-state')
     setAuthUrl(url)
+  }
+
+  async function runGeminiProbe() {
+    setGeminiLoading(true)
+    try {
+      const res = await fetch('/api/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          archetype: 'late-night-driver',
+          quadrant: 'restless',
+          listenerProfile: { discovery: 60, loyalty: 40, emotionalRange: 70, intensity: 65 },
+          chosenWord: 'searching',
+          dataLine: 'Energy avg: 71/100. Valence avg: 43/100.',
+          trend: 'stable',
+          topArtistNames: ['Test Artist'],
+        }),
+      })
+      const data = await res.json()
+      if (data.line && !data.error) {
+        setGeminiResult({ ok: true, text: data.line })
+      } else {
+        setGeminiResult({ ok: false, error: data.error ?? 'Empty response' })
+      }
+    } catch (e) {
+      setGeminiResult({ ok: false, error: String(e) })
+    } finally {
+      setGeminiLoading(false)
+    }
   }
 
   async function runAnalyzeDebug() {
@@ -109,6 +140,31 @@ export default function DebugPage() {
                   {s.detail && <span className="opacity-40 ml-3">{s.detail}</span>}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Gemini probe */}
+        <div className="mt-10 pt-8 border-t border-[#1f1f1f]">
+          <p className="text-xs tracking-widest uppercase opacity-40 mb-4">Gemini API</p>
+          <p className="text-xs opacity-50 mb-4">Sends a test prompt to /api/respond. Does not need Spotify login.</p>
+          <button
+            onClick={runGeminiProbe}
+            disabled={geminiLoading}
+            className="border border-[#6a8aad] px-4 py-2 text-xs tracking-widest uppercase hover:bg-[#6a8aad] hover:text-[#0d0d0d] transition-colors disabled:opacity-40"
+            style={{ color: '#6a8aad' }}
+          >
+            {geminiLoading ? 'Calling Gemini...' : 'Test Gemini response'}
+          </button>
+          {geminiResult && (
+            <div className="mt-4 border px-4 py-3 text-xs"
+              style={{ borderColor: geminiResult.ok ? '#7a9e7e' : '#9b3a3a' }}>
+              <span style={{ color: geminiResult.ok ? '#7a9e7e' : '#cf6679' }}>
+                {geminiResult.ok ? '✓ Gemini is working' : '✗ Gemini failed'}
+              </span>
+              <p className="mt-2 opacity-60 italic leading-5">
+                {geminiResult.ok ? geminiResult.text : geminiResult.error}
+              </p>
             </div>
           )}
         </div>
