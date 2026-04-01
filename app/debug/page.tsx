@@ -4,9 +4,11 @@ import { useState } from 'react'
 import { buildAuthUrl, generatePKCE } from '@/lib/spotify'
 
 export default function DebugPage() {
-  const [authUrl,      setAuthUrl]      = useState<string | null>(null)
-  const [apiResults,   setApiResults]   = useState<unknown[] | null>(null)
-  const [apiLoading,   setApiLoading]   = useState(false)
+  const [authUrl,       setAuthUrl]       = useState<string | null>(null)
+  const [apiResults,    setApiResults]    = useState<unknown[] | null>(null)
+  const [apiLoading,    setApiLoading]    = useState(false)
+  const [analyzeSteps,  setAnalyzeSteps]  = useState<AnalyzeStep[] | null>(null)
+  const [analyzeLoading, setAnalyzeLoading] = useState(false)
 
   const clientId    = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID
   const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI
@@ -16,6 +18,22 @@ export default function DebugPage() {
     const { challenge } = await generatePKCE()
     const url = buildAuthUrl(challenge, 'debug-state')
     setAuthUrl(url)
+  }
+
+  async function runAnalyzeDebug() {
+    const token = sessionStorage.getItem('spotify_token')
+    if (!token) { alert('No spotify_token in sessionStorage. Login first.'); return }
+    setAnalyzeLoading(true)
+    try {
+      const res  = await fetch('/api/debug-analyze', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      const data = await res.json()
+      setAnalyzeSteps(data.steps)
+    } finally {
+      setAnalyzeLoading(false)
+    }
   }
 
   async function runApiProbe() {
@@ -68,6 +86,33 @@ export default function DebugPage() {
           </div>
         )}
 
+        {/* Full analysis debug */}
+        <div className="mt-10 pt-8 border-t border-[#1f1f1f]">
+          <p className="text-xs tracking-widest uppercase opacity-40 mb-4">Full analysis trace</p>
+          <p className="text-xs opacity-50 mb-4">Runs the same logic as the real analysis, step by step. Shows exactly where it fails.</p>
+          <button
+            onClick={runAnalyzeDebug}
+            disabled={analyzeLoading}
+            className="border border-[#9b7fd4] px-4 py-2 text-xs tracking-widest uppercase hover:bg-[#9b7fd4] hover:text-[#0d0d0d] transition-colors disabled:opacity-40"
+            style={{ color: '#9b7fd4' }}
+          >
+            {analyzeLoading ? 'Running...' : 'Trace full analysis'}
+          </button>
+          {analyzeSteps && (
+            <div className="mt-4 space-y-2">
+              {analyzeSteps.map((s, i) => (
+                <div key={i} className="border px-3 py-2 text-xs"
+                  style={{ borderColor: s.ok ? '#7a9e7e' : '#9b3a3a' }}>
+                  <span style={{ color: s.ok ? '#7a9e7e' : '#cf6679' }}>
+                    {s.ok ? '✓' : '✗'} {s.step}
+                  </span>
+                  {s.detail && <span className="opacity-40 ml-3">{s.detail}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* API probe section */}
         <div className="mt-10 pt-8 border-t border-[#1f1f1f]">
           <p className="text-xs tracking-widest uppercase opacity-40 mb-4">Spotify API probe</p>
@@ -118,6 +163,12 @@ export default function DebugPage() {
       </div>
     </main>
   )
+}
+
+interface AnalyzeStep {
+  step:    string
+  ok:      boolean
+  detail?: string
 }
 
 interface ApiProbeResult {
