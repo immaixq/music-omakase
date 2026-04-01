@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMockResult } from '@/lib/mock'
-import {
-  getTopTracks, getAudioFeatures, getTopArtists, getMe, getRecentlyPlayed,
-} from '@/lib/spotify'
+import { getTopTracks, getTopArtists, getMe, getRecentlyPlayed } from '@/lib/spotify'
 import {
   classify, computeLateNightRatio,
-  type AudioFeature, type SpotifyArtist,
+  type SpotifyArtist,
 } from '@/lib/scoring'
 import { getConfessionLine, archetypes } from '@/lib/archetypes'
 import { SHADOW_LINES } from '@/lib/shadowLines'
@@ -30,29 +28,6 @@ export async function POST(req: NextRequest) {
         getRecentlyPlayed(token),
       ])
 
-    // Deduplicated medium+short for main feature analysis
-    const trackMap = new Map<string, typeof mediumTracks[0]>()
-    for (const t of [...mediumTracks, ...shortTracks]) trackMap.set(t.id, t)
-    const allTracks = Array.from(trackMap.values())
-
-    // Audio features for all unique tracks + short-term separately for drift
-    const [allFeatures, shortFeatures] = await Promise.all([
-      getAudioFeatures(token, allTracks.map(t => t.id)),
-      getAudioFeatures(token, shortTracks.map(t => t.id)),
-    ])
-
-    const features: AudioFeature[] = allFeatures.map(f => ({
-      id: f.id, energy: f.energy, valence: f.valence,
-      acousticness: f.acousticness, instrumentalness: f.instrumentalness,
-      tempo: f.tempo, speechiness: f.speechiness, danceability: f.danceability,
-    }))
-
-    const shortFeat: AudioFeature[] = shortFeatures.map(f => ({
-      id: f.id, energy: f.energy, valence: f.valence,
-      acousticness: f.acousticness, instrumentalness: f.instrumentalness,
-      tempo: f.tempo, speechiness: f.speechiness, danceability: f.danceability,
-    }))
-
     const artists: SpotifyArtist[] = topArtists.map(a => ({
       id: a.id, name: a.name, genres: a.genres, popularity: a.popularity,
     }))
@@ -60,9 +35,11 @@ export async function POST(req: NextRequest) {
     const lateNightRatio = computeLateNightRatio(recentlyPlayed)
 
     const result = classify(
-      features, artists,
-      shortTracks, mediumTracks, longTracks,
-      shortFeat, lateNightRatio,
+      artists,
+      shortTracks,
+      mediumTracks,
+      longTracks,
+      lateNightRatio,
     )
 
     const confessionLine = getConfessionLine(result.archetype, result.signals)
@@ -81,12 +58,29 @@ export async function POST(req: NextRequest) {
       handle:          displayHandle,
     })
 
-    // Inject real BPM into letter copy
+    // BPM not available without audio features — omit placeholder
     const letterFilled = letter.map(p =>
-      p.replace('{BPM}', String(result.dataHighlight.bpm))
+      p.replace('{BPM}', result.topGenres[0] ?? 'your top genres')
     ) as [string, string, string]
 
-    const currentState = computeCurrentState(shortFeat, features)
+    // currentState: derive from genre-inferred features as a proxy for short/medium features
+    const proxyFeatures = [{
+      id: 'proxy',
+      energy: result.scores.energyAvg,
+      valence: result.scores.valenceAvg,
+      acousticness: result.scores.acousticAvg,
+      instrumentalness: 0,
+      tempo: 0,
+      speechiness: 0,
+      danceability: 0,
+    }]
+    // Short-term proxy: slightly shift based on recent vs medium popularity delta
+    const shortPopAvg  = shortTracks.length  ? shortTracks.reduce((s, t)  => s + t.popularity, 0) / shortTracks.length  : 50
+    const mediumPopAvg = mediumTracks.length ? mediumTracks.reduce((s, t) => s + t.popularity, 0) / mediumTracks.length : 50
+    const popRatio = (shortPopAvg - mediumPopAvg) / 100  // small delta, [-0.5, 0.5]
+    const shortProxy = [{ ...proxyFeatures[0], valence: Math.max(0, Math.min(1, result.scores.valenceAvg + popRatio * 0.3)) }]
+
+    const currentState = computeCurrentState(shortProxy, proxyFeatures)
 
     return NextResponse.json({
       archetype:       result.archetype,

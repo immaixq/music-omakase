@@ -84,7 +84,7 @@ export function computeCurrentState(
   shortFeatures:  AudioFeature[],
   mediumFeatures: AudioFeature[],
 ): CurrentState {
-  if (shortFeatures.length < 3) return mockCurrentState()
+  if (shortFeatures.length < 1) return mockCurrentState()
 
   const valShort = avg(shortFeatures.map(f => f.valence))
   const engShort = avg(shortFeatures.map(f => f.energy))
