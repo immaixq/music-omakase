@@ -40,12 +40,11 @@ export interface ScoringResult {
   archetype:       ArchetypeKey
   shadowArchetype: ArchetypeKey
   scores: {
-    energyAvg:       number
-    valenceAvg:      number
-    valenceVariance: number
-    acousticAvg:     number
-    bpmAvg:          number
-    genreEntropy:    number
+    energyAvg:    number
+    valenceAvg:   number
+    acousticAvg:  number
+    genreEntropy: number
+    matchRate:    number  // fraction of genres that matched the inference table
   }
   signals: {
     highGenreEntropy: boolean
@@ -55,10 +54,10 @@ export interface ScoringResult {
   listenerProfile: ListenerProfile
   drift:           DriftSignal
   dataHighlight: {
-    bpm:         number
-    genres:      number
-    energyPct:   number
-    variancePct: number
+    genres:       number
+    energyPct:    number
+    loyaltyPct:   number
+    lateNightPct: number
   }
   waveformData: {
     valence: number[]
@@ -71,8 +70,9 @@ export interface ScoringResult {
 // ─── Math helpers ─────────────────────────────────────────────────────────────
 
 function avg(arr: number[]): number {
-  if (arr.length === 0) return 0
-  return arr.reduce((s, v) => s + v, 0) / arr.length
+  const clean = arr.filter(v => typeof v === 'number' && isFinite(v))
+  if (clean.length === 0) return 0
+  return clean.reduce((s, v) => s + v, 0) / clean.length
 }
 
 function clamp(n: number): number {
@@ -105,20 +105,81 @@ export function extractGenreCounts(artists: SpotifyArtist[]): number[] {
 }
 
 // ─── Genre → feature inference ────────────────────────────────────────────────
-// Since Spotify deprecated audio features for new apps, we infer energy/valence
-// from genre keywords. Each genre is matched against keyword lists and contributes
-// a score in [0, 1]. The final values are the weighted average across all genres.
+// Spotify genre strings are very specific ("permanent wave", "dreamo", "escape room").
+// We match each genre by substring against a scored table [energy, valence, acoustic].
+// Multiple keyword matches per genre are averaged so subgenres inherit parent scores.
+// Unmatched genres are excluded rather than pulling the average toward a neutral 0.5.
 
-const ENERGY_HIGH = ['edm','electronic','dance','house','techno','drum and bass','metal','punk',
-  'hip hop','rap','trap','dubstep','hardstyle','rave','club','bass','electro','industrial']
-const ENERGY_LOW  = ['ambient','acoustic','classical','folk','bossa nova','chamber','meditation',
-  'sleep','piano','instrumental','new age','drone','lo-fi','chillout','downtempo']
-const VALENCE_HIGH = ['pop','dance','disco','funk','soul','reggae','latin','samba','tropical',
-  'happy','party','feel-good','upbeat','afrobeat','sunshine']
-const VALENCE_LOW  = ['emo','post-punk','gothic','doom','black metal','dark','melancholic',
-  'sad','shoegaze','slowcore','post-rock','cold wave','darkwave','funeral']
-const ACOUSTIC_HIGH = ['acoustic','folk','singer-songwriter','country','bluegrass','americana',
-  'fingerstyle','classical','flamenco','bossa nova','unplugged']
+// [keyword, energy 0-1, valence 0-1, acoustic 0-1]
+const GENRE_SCORE_MAP: [string, number, number, number][] = [
+  ['edm',                0.92, 0.78, 0.05],
+  ['hard dance',         0.90, 0.72, 0.05],
+  ['drum and bass',      0.90, 0.55, 0.05],
+  ['hardstyle',          0.92, 0.55, 0.05],
+  ['dubstep',            0.88, 0.50, 0.05],
+  ['techno',             0.87, 0.42, 0.05],
+  ['industrial',         0.82, 0.28, 0.05],
+  ['metal',              0.88, 0.22, 0.06],
+  ['hardcore',           0.88, 0.25, 0.05],
+  ['hard rock',          0.80, 0.32, 0.08],
+  ['punk',               0.80, 0.35, 0.08],
+  ['grunge',             0.68, 0.28, 0.12],
+  ['house',              0.82, 0.72, 0.05],
+  ['dance',              0.82, 0.80, 0.05],
+  ['disco',              0.78, 0.85, 0.06],
+  ['funk',               0.74, 0.82, 0.12],
+  ['electro',            0.76, 0.58, 0.05],
+  ['electronic',         0.70, 0.55, 0.05],
+  ['k-pop',              0.75, 0.80, 0.08],
+  ['pop',                0.68, 0.78, 0.10],
+  ['trap',               0.74, 0.40, 0.06],
+  ['hip hop',            0.72, 0.52, 0.06],
+  ['hip-hop',            0.72, 0.52, 0.06],
+  ['rap',                0.70, 0.48, 0.06],
+  ['r&b',                0.58, 0.72, 0.10],
+  ['reggaeton',          0.75, 0.70, 0.06],
+  ['latin',              0.68, 0.72, 0.10],
+  ['afrobeats',          0.72, 0.78, 0.08],
+  ['rock',               0.68, 0.44, 0.10],
+  ['alternative',        0.60, 0.45, 0.14],
+  ['emo',                0.64, 0.24, 0.10],
+  ['post-punk',          0.60, 0.30, 0.10],
+  ['new wave',           0.62, 0.48, 0.10],
+  ['indie rock',         0.60, 0.50, 0.18],
+  ['indie pop',          0.55, 0.65, 0.20],
+  ['indie',              0.52, 0.55, 0.22],
+  ['soul',               0.55, 0.75, 0.18],
+  ['gospel',             0.55, 0.82, 0.20],
+  ['reggae',             0.52, 0.78, 0.22],
+  ['country',            0.52, 0.68, 0.45],
+  ['blues',              0.46, 0.40, 0.35],
+  ['jazz',               0.42, 0.58, 0.38],
+  ['bossa nova',         0.35, 0.72, 0.65],
+  ['folk',               0.34, 0.62, 0.72],
+  ['acoustic',           0.30, 0.60, 0.85],
+  ['singer-songwriter',  0.28, 0.58, 0.80],
+  ['americana',          0.40, 0.62, 0.60],
+  ['bluegrass',          0.48, 0.65, 0.75],
+  ['bedroom pop',        0.34, 0.66, 0.45],
+  ['dream pop',          0.38, 0.62, 0.35],
+  ['shoegaze',           0.45, 0.38, 0.22],
+  ['post-rock',          0.42, 0.36, 0.20],
+  ['slowcore',           0.22, 0.28, 0.40],
+  ['lo-fi',              0.28, 0.55, 0.42],
+  ['chillout',           0.25, 0.60, 0.38],
+  ['downtempo',          0.26, 0.52, 0.30],
+  ['ambient',            0.18, 0.52, 0.50],
+  ['classical',          0.28, 0.55, 0.90],
+  ['orchestra',          0.35, 0.52, 0.90],
+  ['piano',              0.25, 0.55, 0.92],
+  ['chamber',            0.22, 0.52, 0.92],
+  ['new age',            0.18, 0.62, 0.55],
+  ['dark',               0.42, 0.22, 0.15],
+  ['doom',               0.40, 0.18, 0.10],
+  ['gothic',             0.44, 0.22, 0.12],
+  ['sad',                0.28, 0.20, 0.35],
+  ['wave',               0.50, 0.35, 0.10],
+]
 
 function safeGenres(artists: SpotifyArtist[]): string[] {
   return artists
@@ -126,37 +187,45 @@ function safeGenres(artists: SpotifyArtist[]): string[] {
     .filter((g): g is string => typeof g === 'string' && g.length > 0)
 }
 
-function genreMatchScore(genre: string, keywords: string[]): number {
-  const g = genre.toLowerCase()
-  return keywords.some(k => g.includes(k)) ? 1 : 0
-}
-
 interface InferredFeatures {
-  energy:       number  // 0–1
-  valence:      number  // 0–1
-  acousticness: number  // 0–1
+  energy:       number
+  valence:      number
+  acousticness: number
+  matchRate:    number  // fraction of genres that matched — quality signal
 }
 
 function inferFeaturesFromGenres(artists: SpotifyArtist[]): InferredFeatures {
   const allGenres = safeGenres(artists)
-  if (allGenres.length === 0) return { energy: 0.5, valence: 0.5, acousticness: 0.3 }
+  if (allGenres.length === 0) {
+    return { energy: 0.55, valence: 0.55, acousticness: 0.25, matchRate: 0 }
+  }
 
-  const energyScores  = allGenres.map(g => {
-    const hi = genreMatchScore(g, ENERGY_HIGH)
-    const lo = genreMatchScore(g, ENERGY_LOW)
-    return hi ? 0.8 : lo ? 0.2 : 0.5  // unmatched → neutral
-  })
-  const valenceScores = allGenres.map(g => {
-    const hi = genreMatchScore(g, VALENCE_HIGH)
-    const lo = genreMatchScore(g, VALENCE_LOW)
-    return hi ? 0.8 : lo ? 0.25 : 0.5
-  })
-  const acousticScores = allGenres.map(g => genreMatchScore(g, ACOUSTIC_HIGH) ? 0.8 : 0.2)
+  const energyVals:   number[] = []
+  const valenceVals:  number[] = []
+  const acousticVals: number[] = []
+  let matched = 0
+
+  for (const genre of allGenres) {
+    const g = genre.toLowerCase()
+    const hits = GENRE_SCORE_MAP.filter(([kw]) => g.includes(kw))
+    if (hits.length > 0) {
+      matched++
+      energyVals.push(avg(hits.map(h => h[1])))
+      valenceVals.push(avg(hits.map(h => h[2])))
+      acousticVals.push(avg(hits.map(h => h[3])))
+    }
+    // Unmatched genres are excluded rather than averaging toward 0.5
+  }
+
+  if (energyVals.length === 0) {
+    return { energy: 0.55, valence: 0.55, acousticness: 0.25, matchRate: 0 }
+  }
 
   return {
-    energy:       avg(energyScores),
-    valence:      avg(valenceScores),
-    acousticness: avg(acousticScores),
+    energy:       avg(energyVals),
+    valence:      avg(valenceVals),
+    acousticness: avg(acousticVals),
+    matchRate:    matched / allGenres.length,
   }
 }
 
@@ -369,21 +438,20 @@ export function classify(
     archetype,
     shadowArchetype,
     scores: {
-      energyAvg:       inferred.energy,
-      valenceAvg:      inferred.valence,
-      valenceVariance: 0,  // not computable without audio features
-      acousticAvg:     inferred.acousticness,
-      bpmAvg:          0,
+      energyAvg:    inferred.energy,
+      valenceAvg:   inferred.valence,
+      acousticAvg:  inferred.acousticness,
       genreEntropy,
+      matchRate:    inferred.matchRate,
     },
     signals,
     listenerProfile,
     drift: detectDrift(shortTracks, mediumTracks),
     dataHighlight: {
-      bpm:         0,
-      genres:      totalGenres,
-      energyPct:   Math.round(inferred.energy * 100),
-      variancePct: 0,
+      genres:       totalGenres,
+      energyPct:    Math.round(inferred.energy * 100),
+      loyaltyPct:   listenerProfile.loyalty,
+      lateNightPct: Math.round(lateNightRatio * 100),
     },
     waveformData: {
       valence: waveformValence,

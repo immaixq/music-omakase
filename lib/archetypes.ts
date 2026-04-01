@@ -46,7 +46,7 @@ export const archetypes: Record<ArchetypeKey, Archetype> = {
       { condition: 'high_genre_entropy', line: 'switches genres like switching browser tabs.' },
       { condition: 'default',            line: 'optimizes everything, including how they feel.' },
     ],
-    dataHighlightTemplate: 'Average BPM: {bpm}. You move faster than {pct}% of listeners.',
+    dataHighlightTemplate: 'Energy index: {pct}/100. You run harder than most listeners.',
     visualClass: 'archetype-electric',
   },
   'soft-launch': {

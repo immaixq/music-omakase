@@ -56,11 +56,11 @@ export async function POST(req: NextRequest) {
       genreCount:      result.dataHighlight.genres,
       lateNight:       result.signals.lateNight,
       handle:          displayHandle,
+      lateNightPct:    result.dataHighlight.lateNightPct,
     })
 
-    // BPM not available without audio features — omit placeholder
     const letterFilled = letter.map(p =>
-      p.replace('{BPM}', result.topGenres[0] ?? 'your top genres')
+      p.replace('{BPM}', '—')
     ) as [string, string, string]
 
     // currentState: derive from genre-inferred features as a proxy for short/medium features
@@ -105,12 +105,14 @@ export async function POST(req: NextRequest) {
 
 function buildHighlight(
   template: string,
-  data: { bpm: number; genres: number; energyPct: number; variancePct: number }
+  data: { genres: number; energyPct: number; loyaltyPct: number; lateNightPct: number }
 ): string {
-  const pct = Math.min(99, Math.max(50, Math.round(data.energyPct * 1.1)))
+  const pct   = Math.min(99, Math.max(51, data.energyPct))
+  const count = Math.max(3, Math.round(data.genres * 0.2))
   return template
-    .replace('{bpm}',    String(data.bpm))
-    .replace('{genres}', String(data.genres))
-    .replace('{pct}',    String(pct))
-    .replace('{count}',  String(Math.max(3, Math.round(data.genres * 0.2))))
+    .replace('{genres}',      String(data.genres))
+    .replace('{pct}',         String(pct))
+    .replace('{count}',       String(count))
+    .replace('{loyalty}',     String(data.loyaltyPct))
+    .replace('{lateNight}',   String(data.lateNightPct))
 }

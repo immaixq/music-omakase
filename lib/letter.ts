@@ -9,6 +9,7 @@ export interface LetterContext {
   genreCount:      number
   lateNight:       boolean
   handle:          string
+  lateNightPct?:   number
 }
 
 interface LetterTemplate {
@@ -162,8 +163,9 @@ function score(template: LetterTemplate, ctx: LetterContext): number {
 
 function fill(text: string, ctx: LetterContext): string {
   return text
-    .replace('{GENRE_COUNT}', String(ctx.genreCount))
-    .replace('{BPM}', '—')  // real value injected in analyze route
+    .replace('{GENRE_COUNT}',    String(ctx.genreCount))
+    .replace('{LATE_NIGHT_PCT}', ctx.lateNightPct != null ? `${ctx.lateNightPct}%` : 'a notable chunk')
+    .replace('{BPM}', '—')
 }
 
 export function selectLetter(ctx: LetterContext): [string, string, string] {

@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
       genreCount:      result.dataHighlight.genres,
       lateNight:       result.signals.lateNight,
       handle:          me.display_name ?? 'you',
+      lateNightPct:    result.dataHighlight.lateNightPct,
     })
     pass('letter', `paragraphs=${letter.length}`)
   } catch (e) {
