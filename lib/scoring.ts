@@ -230,43 +230,60 @@ function inferFeaturesFromGenres(artists: SpotifyArtist[]): InferredFeatures {
 }
 
 // ─── Archetype scoring ────────────────────────────────────────────────────────
+// Each archetype is scored from two independent signal groups:
+//   1. Behavior signals  — always available: popularity, loyalty, late-night ratio, track novelty
+//   2. Genre signals     — only when matchRate > 0.2; blended in proportionally
+//
+// This ensures a meaningful result even when Spotify returns artists with no genres.
 
-function scoreHypeArchitect(energy: number, acoustic: number, avgPopularity: number): number {
-  // High energy + low acoustic + mainstream popularity (hype needs an audience)
-  return (
-    clamp((energy - 0.45) / 0.4)   * 0.45 +
-    clamp((0.4 - acoustic) / 0.4)  * 0.30 +
-    clamp(avgPopularity / 80)       * 0.25
-  )
+function scoreHypeArchitect(
+  avgPopularity: number, loyalty: number,
+  genreEnergy: number, matchRate: number,
+): number {
+  // Behavior: mainstream taste + low loyalty (always moving to the next thing)
+  const behavior = clamp(avgPopularity / 100) * 0.55 + clamp((60 - loyalty) / 60) * 0.45
+  // Genre boost: high energy genres push score up
+  const genre = matchRate > 0.2 ? clamp((genreEnergy - 0.5) / 0.5) : 0
+  return behavior * (1 - matchRate * 0.4) + genre * (matchRate * 0.4)
 }
 
-function scoreSoftLaunch(acoustic: number, genreEntropy: number, loyalty: number): number {
-  // High acoustic + narrow genre range + returning to same artists
-  return (
-    clamp(acoustic / 0.6)              * 0.40 +
-    clamp((3.0 - genreEntropy) / 3.0)  * 0.35 +
-    clamp(loyalty / 80)                * 0.25
-  )
+function scoreSoftLaunch(
+  loyalty: number, avgPopularity: number,
+  genreAcoustic: number, matchRate: number,
+): number {
+  // Behavior: high loyalty (keeps returning) + mid popularity (not chasing mainstream)
+  const behavior = clamp(loyalty / 100) * 0.60 + clamp((75 - Math.abs(avgPopularity - 55)) / 75) * 0.40
+  const genre = matchRate > 0.2 ? clamp(genreAcoustic / 0.7) : 0
+  return behavior * (1 - matchRate * 0.35) + genre * (matchRate * 0.35)
 }
 
 function scoreLateNightDriver(
-  valence: number, energy: number,
-  lateNightRatio: number, genreEntropy: number
+  lateNightRatio: number, loyalty: number, avgPopularity: number,
+  genreValence: number, matchRate: number,
 ): number {
-  // Mid-low valence + moderate energy + late night listening + some genre spread
-  const moodMix = clamp((0.6 - valence) / 0.4) * 0.3 + clamp((energy - 0.35) / 0.4) * 0.2
-  const lateNight = clamp(lateNightRatio / 0.25) * 0.35
-  const breadth   = clamp(genreEntropy / 4.0) * 0.15
-  return moodMix + lateNight + breadth
+  // Behavior: late-night listening is the primary signal; mid loyalty + mid popularity
+  const lateNight = clamp(lateNightRatio / 0.3) * 0.50
+  const behavior  = clamp((70 - Math.abs(loyalty - 45)) / 70) * 0.25 +
+                    clamp((80 - Math.abs(avgPopularity - 45)) / 80) * 0.25
+  // Genre: lower valence genres (introspective/emotional) boost this
+  const genre = matchRate > 0.2 ? clamp((0.65 - genreValence) / 0.5) : 0
+  return (lateNight + behavior) * (1 - matchRate * 0.3) + genre * (matchRate * 0.3)
 }
 
-function scoreTheStatic(genreEntropy: number, totalGenres: number, avgPopularity: number): number {
-  // Primary: raw genre count + entropy; secondary: low popularity (obscure taste)
-  return (
-    clamp(genreEntropy / 4.5)    * 0.45 +
-    clamp(totalGenres / 25)      * 0.35 +
-    clamp((60 - avgPopularity) / 60) * 0.20
-  )
+function scoreTheStatic(
+  loyalty: number, avgPopularity: number,
+  trackNoveltyRatio: number,  // fraction of short-term artists not in medium-term
+  genreEntropy: number, totalGenres: number, matchRate: number,
+): number {
+  // Behavior: low loyalty + low-mid popularity + high track novelty (always finding new artists)
+  const behavior = clamp((50 - loyalty) / 50) * 0.40 +
+                   clamp(trackNoveltyRatio)    * 0.35 +
+                   clamp((65 - avgPopularity) / 65) * 0.25
+  // Genre: wide genre spread is a strong confirming signal when available
+  const genre = matchRate > 0.2
+    ? clamp(genreEntropy / 4.5) * 0.5 + clamp(totalGenres / 25) * 0.5
+    : 0
+  return behavior * (1 - matchRate * 0.45) + genre * (matchRate * 0.45)
 }
 
 // ─── Listener profile ─────────────────────────────────────────────────────────
@@ -384,37 +401,33 @@ export function classify(
 
   const listenerProfile = computeListenerProfile(shortTracks, mediumTracks, longTracks, topArtists)
 
+  // Track novelty: fraction of short-term artists absent from medium-term (measures restlessness)
+  const medArtistIds     = new Set(mediumTracks.flatMap(t => t.artists.map(a => a.id)))
+  const trackNoveltyRatio = shortTracks.length > 0
+    ? shortTracks.filter(t => t.artists.some(a => !medArtistIds.has(a.id))).length / shortTracks.length
+    : 0
+
   const signals = {
     highGenreEntropy: genreEntropy > 3.5,
     lateNight:        lateNightRatio > 0.25,
     highSkip:         false,
   }
 
+  const mr = inferred.matchRate  // 0 when no genres, up to 1 when all match
+
   // Score all four archetypes
   const typeScores: Record<ArchetypeKey, number> = {
-    'hype-architect':    scoreHypeArchitect(inferred.energy, inferred.acousticness, avgPopularity),
-    'soft-launch':       scoreSoftLaunch(inferred.acousticness, genreEntropy, listenerProfile.loyalty),
-    'late-night-driver': scoreLateNightDriver(inferred.valence, inferred.energy, lateNightRatio, genreEntropy),
-    'the-static':        scoreTheStatic(genreEntropy, totalGenres, avgPopularity),
+    'hype-architect':    scoreHypeArchitect(avgPopularity, listenerProfile.loyalty, inferred.energy, mr),
+    'soft-launch':       scoreSoftLaunch(listenerProfile.loyalty, avgPopularity, inferred.acousticness, mr),
+    'late-night-driver': scoreLateNightDriver(lateNightRatio, listenerProfile.loyalty, avgPopularity, inferred.valence, mr),
+    'the-static':        scoreTheStatic(listenerProfile.loyalty, avgPopularity, trackNoveltyRatio, genreEntropy, totalGenres, mr),
   }
 
   const ranked = (Object.entries(typeScores) as [ArchetypeKey, number][])
     .sort(([, a], [, b]) => b - a)
 
-  let archetype       = ranked[0][0]
-  let shadowArchetype = ranked[1][0]
-
-  // Stable tiebreak when top two are very close (prevents noise flips)
-  const margin = ranked[0][1] - ranked[1][1]
-  if (margin < 0.05) {
-    if (
-      (archetype === 'late-night-driver' || archetype === 'the-static') &&
-      (shadowArchetype === 'late-night-driver' || shadowArchetype === 'the-static')
-    ) {
-      archetype       = genreEntropy > 3.8 ? 'the-static' : 'late-night-driver'
-      shadowArchetype = genreEntropy > 3.8 ? 'late-night-driver' : 'the-static'
-    }
-  }
+  const archetype       = ranked[0][0]
+  const shadowArchetype = ranked[1][0]
 
   // Top artist names + top genres
   const topArtistNames = topArtists.slice(0, 5).map(a => a.name)

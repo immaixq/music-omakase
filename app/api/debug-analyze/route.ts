@@ -45,7 +45,17 @@ export async function POST(req: NextRequest) {
     }))
     const lateNightRatio = computeLateNightRatio(recentlyPlayed)
     result = classify(artists, shortTracks, mediumTracks, longTracks, lateNightRatio)
-    pass('classify', `archetype=${result.archetype}, shadow=${result.shadowArchetype}, genres=${result.topGenres.slice(0,3).join(',')}`)
+    pass('classify', [
+      `archetype=${result.archetype}`,
+      `shadow=${result.shadowArchetype}`,
+      `genres=${result.topGenres.slice(0,3).join(',') || '(none)'}`,
+      `matchRate=${Math.round(result.scores.matchRate * 100)}%`,
+      `energy=${Math.round(result.scores.energyAvg * 100)}`,
+      `valence=${Math.round(result.scores.valenceAvg * 100)}`,
+      `discovery=${result.listenerProfile.discovery}`,
+      `loyalty=${result.listenerProfile.loyalty}`,
+      `intensity=${result.listenerProfile.intensity}`,
+    ].join(' | '))
   } catch (e) {
     return fail('classify', e)
   }
