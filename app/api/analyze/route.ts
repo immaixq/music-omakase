@@ -10,6 +10,7 @@ import {
 import { getConfessionLine, archetypes } from '@/lib/archetypes'
 import { SHADOW_LINES } from '@/lib/shadowLines'
 import { selectLetter } from '@/lib/letter'
+import { computeCurrentState } from '@/lib/currentState'
 
 export async function POST(req: NextRequest) {
   const body   = await req.json().catch(() => ({}))
@@ -85,6 +86,8 @@ export async function POST(req: NextRequest) {
       p.replace('{BPM}', String(result.dataHighlight.bpm))
     ) as [string, string, string]
 
+    const currentState = computeCurrentState(shortFeat, features)
+
     return NextResponse.json({
       archetype:       result.archetype,
       shadowArchetype: result.shadowArchetype,
@@ -96,6 +99,7 @@ export async function POST(req: NextRequest) {
       drift:           result.drift,
       letter:          letterFilled,
       waveformData:    result.waveformData,
+      currentState,
     })
   } catch (err) {
     console.error('[analyze]', err)

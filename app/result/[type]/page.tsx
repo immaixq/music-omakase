@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { archetypes, type ArchetypeKey } from '@/lib/archetypes'
 import type { AnalyzeResult } from '@/lib/mock'
 import type { ListenerProfile, DriftSignal } from '@/lib/scoring'
+import { ArchetypeArt } from '@/components/ArchetypeArt'
+import { CurrentStateReveal } from '@/components/CurrentStateReveal'
 
 type Phase = 'name' | 'confession' | 'shadow' | 'full' | 'profile' | 'letter' | 'card'
 
@@ -82,6 +84,14 @@ export default function ResultPage() {
             {handle}
           </motion.p>
         )}
+
+        {/* Archetype art mark */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="mb-6">
+          <ArchetypeArt archetype={key} color={archetype.color} size={96} animate />
+        </motion.div>
 
         {/* Primary archetype */}
         <motion.h1
@@ -181,6 +191,21 @@ export default function ResultPage() {
           </motion.div>
         )}
 
+        {/* Current state — interactive */}
+        <AnimatePresence>
+          {phases('letter','card') && (
+            <motion.div key="current-state"
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-10">
+              <CurrentStateReveal
+                state={result.currentState}
+                accentColor={archetype.color}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* The Letter */}
         <AnimatePresence>
           {phases('letter','card') && (
@@ -199,6 +224,9 @@ export default function ResultPage() {
                   {para}
                 </p>
               ))}
+
+              {/* Data receipt */}
+              <DataReceipt result={result} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -246,6 +274,7 @@ export default function ResultPage() {
                 waveformData={result.waveformData}
                 driftDetected={result.drift.detected}
                 quizMode={quizMode}
+                archetypeKey={key}
               />
 
               <p className="mt-3 text-xs opacity-40 text-center"
@@ -289,6 +318,40 @@ export default function ResultPage() {
         </AnimatePresence>
       </div>
     </main>
+  )
+}
+
+// ─── Data receipt ─────────────────────────────────────────────────────────────
+
+function DataReceipt({ result }: { result: AnalyzeResult }) {
+  const rows: [string, string][] = [
+    ['archetype',       result.archetype],
+    ['shadow',          result.shadowArchetype],
+    ['discovery',       `${result.listenerProfile.discovery} / 100`],
+    ['loyalty',         `${result.listenerProfile.loyalty} / 100`],
+    ['emotional range', `${result.listenerProfile.emotionalRange} / 100`],
+    ['intensity',       `${result.listenerProfile.intensity} / 100`],
+  ]
+  if (result.drift.detected && result.drift.direction) {
+    rows.push(['shift detected', result.drift.direction])
+  }
+
+  return (
+    <div className="mt-8 border border-[#1a1a1a] px-5 py-4">
+      <p className="text-xs tracking-[0.3em] uppercase opacity-20 mb-4 pb-2 border-b border-[#1a1a1a]"
+        style={{ fontFamily: 'Courier New, monospace' }}>
+        AUDIT TRACE
+      </p>
+      <div className="space-y-2">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex justify-between text-xs"
+            style={{ fontFamily: 'Courier New, monospace' }}>
+            <span className="opacity-25">{label}</span>
+            <span className="opacity-40">{value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -361,7 +424,7 @@ function Waveform({ valence, energy, color, width = 280, height = 48 }: {
 // ─── Share card ───────────────────────────────────────────────────────────────
 
 function ShareCard({ archetypeName, shadowName, confession, color, shadowColor,
-  handle, waveformData, driftDetected, quizMode }: {
+  handle, waveformData, driftDetected, quizMode, archetypeKey }: {
   archetypeName: string
   shadowName:    string
   confession:    string
@@ -371,6 +434,7 @@ function ShareCard({ archetypeName, shadowName, confession, color, shadowColor,
   waveformData:  { valence: number[]; energy: number[] }
   driftDetected: boolean
   quizMode:      boolean
+  archetypeKey:  ArchetypeKey
 }) {
   const now   = new Date()
   const stamp = now.toLocaleString('en-US', { month: 'long', year: 'numeric' })
@@ -381,14 +445,17 @@ function ShareCard({ archetypeName, shadowName, confession, color, shadowColor,
       style={{ background: '#0d0d0d', minHeight: '340px' }}>
 
       {/* Top */}
-      <div>
-        <p className="text-xs tracking-[0.25em] uppercase opacity-40 mb-1"
-          style={{ fontFamily: 'Courier New, monospace' }}>VIBE-ID</p>
-        {handle !== 'you' && (
-          <p className="text-xs opacity-25" style={{ fontFamily: 'Courier New, monospace' }}>
-            @{handle}
-          </p>
-        )}
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs tracking-[0.25em] uppercase opacity-40 mb-1"
+            style={{ fontFamily: 'Courier New, monospace' }}>VIBE-ID</p>
+          {handle !== 'you' && (
+            <p className="text-xs opacity-25" style={{ fontFamily: 'Courier New, monospace' }}>
+              @{handle}
+            </p>
+          )}
+        </div>
+        <ArchetypeArt archetype={archetypeKey} color={color} size={40} animate={false} />
       </div>
 
       {/* Main */}

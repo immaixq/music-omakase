@@ -1,6 +1,7 @@
 import type { ArchetypeKey } from './archetypes'
 import { SHADOW_LINES } from './shadowLines'
 import type { ListenerProfile, DriftSignal } from './scoring'
+import { mockCurrentState, type CurrentState } from './currentState'
 
 export interface AnalyzeResult {
   archetype:       ArchetypeKey
@@ -13,6 +14,7 @@ export interface AnalyzeResult {
   drift:           DriftSignal
   letter:          [string, string, string]
   waveformData:    { valence: number[]; energy: number[] }
+  currentState:    CurrentState
 }
 
 const CONFESSION_LINES: Record<ArchetypeKey, string> = {
@@ -104,5 +106,6 @@ export function getMockResult(handle: string): AnalyzeResult {
     drift:           NO_DRIFT,
     letter:          MOCK_LETTERS[archetype],
     waveformData:    MOCK_WAVEFORMS[archetype],
+    currentState:    mockCurrentState(),
   }
 }
