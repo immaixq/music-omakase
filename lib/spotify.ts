@@ -25,9 +25,15 @@ export async function generatePKCE(): Promise<{ verifier: string; challenge: str
   return { verifier, challenge }
 }
 
+function getRedirectUri(): string {
+  const env = process.env.NEXT_PUBLIC_REDIRECT_URI
+  if (env) return env
+  return `${window.location.origin}/callback`
+}
+
 export function buildAuthUrl(challenge: string, state: string): string {
-  const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID!
-  const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI!
+  const clientId    = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID!
+  const redirectUri = getRedirectUri()
   const params = new URLSearchParams({
     client_id:             clientId,
     response_type:         'code',
@@ -41,8 +47,8 @@ export function buildAuthUrl(challenge: string, state: string): string {
 }
 
 export async function exchangeToken(code: string, verifier: string): Promise<string> {
-  const clientId   = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID!
-  const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI!
+  const clientId    = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID!
+  const redirectUri = getRedirectUri()
 
   const res = await fetch(SPOTIFY_TOKEN_URL, {
     method: 'POST',
@@ -75,7 +81,14 @@ async function get<T>(path: string, token: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
-export async function getTopTracks(token: string, timeRange: 'short_term' | 'medium_term') {
+export async function getMe(token: string): Promise<{ display_name: string; id: string }> {
+  return get<{ display_name: string; id: string }>('/me', token)
+}
+
+export async function getTopTracks(
+  token: string,
+  timeRange: 'short_term' | 'medium_term' | 'long_term'
+) {
   const data = await get<{ items: SpotifyTrack[] }>(
     `/me/top/tracks?limit=50&time_range=${timeRange}`,
     token
@@ -84,10 +97,9 @@ export async function getTopTracks(token: string, timeRange: 'short_term' | 'med
 }
 
 export async function getAudioFeatures(token: string, ids: string[]) {
-  // Spotify allows max 100 per request
+  if (ids.length === 0) return []
   const chunks: string[][] = []
   for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100))
-
   const results = await Promise.all(
     chunks.map(chunk =>
       get<{ audio_features: AudioFeatureRaw[] }>(
@@ -107,31 +119,42 @@ export async function getTopArtists(token: string) {
   return data.items
 }
 
-// ─── Raw types (minimal) ─────────────────────────────────────────────────────
+export async function getRecentlyPlayed(token: string) {
+  const data = await get<{ items: RecentlyPlayedItem[] }>(
+    '/me/player/recently-played?limit=50',
+    token
+  )
+  return data.items
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface SpotifyTrack {
-  id: string
-  name: string
-  artists: { id: string; name: string }[]
+  id:         string
+  name:       string
+  popularity: number
+  artists:    { id: string; name: string }[]
 }
 
 export interface AudioFeatureRaw {
-  id: string
-  energy: number
-  valence: number
-  acousticness: number
+  id:               string
+  energy:           number
+  valence:          number
+  acousticness:     number
   instrumentalness: number
-  tempo: number
-  speechiness: number
-  danceability: number
+  tempo:            number
+  speechiness:      number
+  danceability:     number
 }
 
 export interface SpotifyArtistRaw {
-  id: string
-  name: string
-  genres: string[]
+  id:         string
+  name:       string
+  genres:     string[]
+  popularity: number
 }
 
-export async function getMe(token: string): Promise<{ display_name: string; id: string }> {
-  return get<{ display_name: string; id: string }>('/me', token)
+export interface RecentlyPlayedItem {
+  track:     { id: string }
+  played_at: string  // ISO 8601
 }

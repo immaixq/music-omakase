@@ -6,8 +6,9 @@ import { buildAuthUrl, generatePKCE } from '@/lib/spotify'
 export default function DebugPage() {
   const [authUrl, setAuthUrl] = useState<string | null>(null)
 
-  const clientId   = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID
+  const clientId    = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID
   const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI
+  const origin      = typeof window !== 'undefined' ? window.location.origin : null
 
   async function generate() {
     const { challenge } = await generatePKCE()
@@ -24,6 +25,10 @@ export default function DebugPage() {
       <div className="space-y-6 max-w-2xl">
         <Row label="NEXT_PUBLIC_SPOTIFY_CLIENT_ID" value={clientId} />
         <Row label="NEXT_PUBLIC_REDIRECT_URI"      value={redirectUri} />
+        <Row label="window.location.origin (fallback)" value={origin} />
+        <Row label="redirect_uri that will be used"
+             value={redirectUri ?? (origin ? `${origin}/callback` : null)}
+             highlight />
 
         <button
           onClick={generate}
