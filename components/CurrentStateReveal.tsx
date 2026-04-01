@@ -117,13 +117,14 @@ function AmbientBars({ quadrant, color }: { quadrant: MoodQuadrant; color: strin
 }
 
 interface Props {
-  state:           CurrentState
-  accentColor:     string
-  archetype?:      string
+  state:            CurrentState
+  accentColor:      string
+  archetype?:       string
   listenerProfile?: ListenerProfile
+  topArtistNames?:  string[]
 }
 
-export function CurrentStateReveal({ state, accentColor, archetype, listenerProfile }: Props) {
+export function CurrentStateReveal({ state, accentColor, archetype, listenerProfile, topArtistNames }: Props) {
   const [unlocked,      setUnlocked]      = useState(false)
   const [pickedWord,    setPickedWord]    = useState<string | null>(null)
   const [resonanceLine, setResonanceLine] = useState<string | null>(null)
@@ -148,6 +149,7 @@ export function CurrentStateReveal({ state, accentColor, archetype, listenerProf
           chosenWord:      word,
           dataLine:        state.dataLine,
           trend:           state.trend,
+          topArtistNames:  topArtistNames ?? [],
         }),
       })
       if (res.ok) {

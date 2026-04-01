@@ -100,6 +100,8 @@ export async function POST(req: NextRequest) {
       letter:          letterFilled,
       waveformData:    result.waveformData,
       currentState,
+      topArtistNames:  result.topArtistNames,
+      topGenres:       result.topGenres,
     })
   } catch (err) {
     console.error('[analyze]', err)

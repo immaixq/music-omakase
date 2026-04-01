@@ -64,6 +64,9 @@ export interface ScoringResult {
     valence: number[]
     energy:  number[]
   }
+  // Real data references
+  topArtistNames: string[]   // top 5 artist names
+  topGenres:      string[]   // top 5 genres by frequency
 }
 
 // ─── Math helpers ─────────────────────────────────────────────────────────────
@@ -123,12 +126,20 @@ function scoreSoftLaunch(acoustic: number, entropy: number): number {
   return (clamp(acoustic / 0.6) + clamp((3.5 - entropy) / 3.5)) / 2
 }
 
-function scoreLateNightDriver(variance: number, energy: number): number {
-  return (clamp(variance / 0.08) + clamp((energy - 0.3) / 0.5)) / 2
+function scoreLateNightDriver(variance: number, energy: number, lateNightRatio: number): number {
+  // Primary: valence variance (wide mood swings) + late night listening
+  // Energy is secondary — LND is mid-energy, not a hype signal
+  return (
+    clamp(variance / 0.06) * 0.5 +
+    clamp(lateNightRatio / 0.3) * 0.3 +
+    clamp((energy - 0.35) / 0.4) * 0.2
+  )
 }
 
-function scoreTheStatic(entropy: number, variance: number): number {
-  return clamp(entropy / 5) * 0.7 + clamp(variance / 0.08) * 0.3
+function scoreTheStatic(entropy: number, variance: number, totalGenres: number): number {
+  // Primary: genre breadth (entropy + raw genre count). Variance is only a minor signal.
+  const genreScore = clamp(totalGenres / 20) * 0.4 + clamp(entropy / 4.5) * 0.4
+  return genreScore + clamp(variance / 0.08) * 0.2
 }
 
 // ─── Listener profile ─────────────────────────────────────────────────────────
@@ -262,16 +273,41 @@ export function classify(
   const typeScores: Record<ArchetypeKey, number> = {
     'hype-architect':    scoreHypeArchitect(energyAvg, bpmAvg, acousticAvg),
     'soft-launch':       scoreSoftLaunch(acousticAvg, genreEntropy),
-    'late-night-driver': scoreLateNightDriver(valenceVariance, energyAvg),
-    'the-static':        scoreTheStatic(genreEntropy, valenceVariance),
+    'late-night-driver': scoreLateNightDriver(valenceVariance, energyAvg, lateNightRatio),
+    'the-static':        scoreTheStatic(genreEntropy, valenceVariance, totalGenres),
   }
 
   const ranked = (Object.entries(typeScores) as [ArchetypeKey, number][]).sort(([, a], [, b]) => b - a)
-  const archetype       = ranked[0][0]
-  const shadowArchetype = ranked[1][0]
+
+  // Require a minimum margin of 0.06 to flip the top result — prevents noise-driven flips
+  // If margin is too small, treat the scores as tied and use a stable tiebreak (entropy > 3.5 → static)
+  let archetype       = ranked[0][0]
+  let shadowArchetype = ranked[1][0]
+  const margin = ranked[0][1] - ranked[1][1]
+  if (margin < 0.06 && (archetype === 'late-night-driver' || archetype === 'the-static') &&
+      (shadowArchetype === 'late-night-driver' || shadowArchetype === 'the-static')) {
+    // Stable tiebreak: genre breadth wins for The Static, late night wins for LND
+    archetype       = genreEntropy > 3.8 ? 'the-static' : 'late-night-driver'
+    shadowArchetype = genreEntropy > 3.8 ? 'late-night-driver' : 'the-static'
+  }
 
   // Medium-term features for drift comparison
   const mediumFeatures = audioFeatures
+
+  // Top 5 artist names
+  const topArtistNames = topArtists.slice(0, 5).map(a => a.name)
+
+  // Top 5 genres by frequency across all artists
+  const genreFreq: Record<string, number> = {}
+  for (const artist of topArtists) {
+    for (const genre of artist.genres) {
+      genreFreq[genre] = (genreFreq[genre] ?? 0) + 1
+    }
+  }
+  const topGenres = Object.entries(genreFreq)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([g]) => g)
 
   return {
     archetype,
@@ -290,5 +326,7 @@ export function classify(
       valence: audioFeatures.slice(0, 24).map(f => f.valence),
       energy:  audioFeatures.slice(0, 24).map(f => f.energy),
     },
+    topArtistNames,
+    topGenres,
   }
 }

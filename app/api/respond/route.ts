@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
     chosenWord,
     dataLine,
     trend,
+    topArtistNames,
   } = body
 
   if (!archetype || !quadrant || !chosenWord) {
@@ -42,14 +43,19 @@ Rules:
 - Tone: honest, observational, slightly literary. Like a music critic who has seen your data
 - Exactly 2 sentences. No more.`
 
+  const artistsLine = Array.isArray(topArtistNames) && topArtistNames.length > 0
+    ? `Their most-played artists right now: ${topArtistNames.slice(0, 3).join(', ')}.`
+    : ''
+
   const prompt = `Listener archetype: ${archetypeLabel[archetype] ?? archetype}
 Current mood quadrant: ${quadrantDesc[quadrant] ?? quadrant}
 Trend: ${trend ?? 'stable'}
 They picked the word: "${chosenWord}"
 Backing data: ${dataLine}
+${artistsLine}
 Listener profile — discovery ${listenerProfile?.discovery ?? 50}/100, loyalty ${listenerProfile?.loyalty ?? 50}/100, emotional range ${listenerProfile?.emotionalRange ?? 50}/100, intensity ${listenerProfile?.intensity ?? 50}/100
 
-Write exactly 2 sentences responding to their word choice. Reference a specific number or pattern from the backing data. Do not repeat the word back to them verbatim.`
+Write exactly 2 sentences responding to their word choice. If artist names are provided, you may reference one by name to ground the observation. Reference a specific number from the backing data. Do not repeat the word back to them verbatim.`
 
   try {
     const model = genAI.getGenerativeModel({

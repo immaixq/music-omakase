@@ -15,6 +15,8 @@ export interface AnalyzeResult {
   letter:          [string, string, string]
   waveformData:    { valence: number[]; energy: number[] }
   currentState:    CurrentState
+  topArtistNames:  string[]
+  topGenres:       string[]
 }
 
 const CONFESSION_LINES: Record<ArchetypeKey, string> = {
@@ -107,5 +109,7 @@ export function getMockResult(handle: string): AnalyzeResult {
     letter:          MOCK_LETTERS[archetype],
     waveformData:    MOCK_WAVEFORMS[archetype],
     currentState:    mockCurrentState(),
+    topArtistNames:  ['Radiohead', 'The National', 'Bon Iver', 'LCD Soundsystem', 'Portishead'],
+    topGenres:       ['alternative rock', 'indie', 'art rock', 'electronic', 'post-rock'],
   }
 }

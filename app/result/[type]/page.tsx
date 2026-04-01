@@ -170,6 +170,50 @@ export default function ResultPage() {
                   <ProfileBar key={dim} dim={dim} value={val} color={archetype.color} />
                 ))}
               </div>
+
+              {/* Real artist + genre data */}
+              {result.topArtistNames?.length > 0 && (
+                <div className="mt-8 space-y-5">
+                  <div>
+                    <p className="text-xs tracking-[0.2em] uppercase opacity-25 mb-3"
+                      style={{ fontFamily: 'Courier New, monospace' }}>
+                      who you keep returning to
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {result.topArtistNames.map((name, i) => (
+                        <span key={name}
+                          className="text-xs px-3 py-1 border border-[#2a2a2a]"
+                          style={{
+                            fontFamily: 'Courier New, monospace',
+                            opacity: 1 - i * 0.12,
+                            color: i === 0 ? archetype.color : '#f0ede6',
+                            borderColor: i === 0 ? archetype.color : '#2a2a2a',
+                          }}>
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {result.topGenres?.length > 0 && (
+                    <div>
+                      <p className="text-xs tracking-[0.2em] uppercase opacity-25 mb-3"
+                        style={{ fontFamily: 'Courier New, monospace' }}>
+                        the territory you live in
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {result.topGenres.map(genre => (
+                          <span key={genre}
+                            className="text-xs px-3 py-1 border border-[#1f1f1f] opacity-50"
+                            style={{ fontFamily: 'Courier New, monospace' }}>
+                            {genre}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -203,6 +247,7 @@ export default function ResultPage() {
                 accentColor={archetype.color}
                 archetype={result.archetype}
                 listenerProfile={result.listenerProfile}
+                topArtistNames={result.topArtistNames}
               />
             </motion.div>
           )}
