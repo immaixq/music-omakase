@@ -20,12 +20,12 @@ export async function POST(req: NextRequest) {
   try {
     const [me, shortTracks, mediumTracks, longTracks, topArtists, recentlyPlayed] =
       await Promise.all([
-        getMe(token),
-        getTopTracks(token, 'short_term'),
-        getTopTracks(token, 'medium_term'),
-        getTopTracks(token, 'long_term'),
-        getTopArtists(token),
-        getRecentlyPlayed(token),
+        getMe(token).catch(e => { throw new Error(`getMe: ${e.message}`) }),
+        getTopTracks(token, 'short_term').catch(e => { throw new Error(`top_tracks_short: ${e.message}`) }),
+        getTopTracks(token, 'medium_term').catch(e => { throw new Error(`top_tracks_medium: ${e.message}`) }),
+        getTopTracks(token, 'long_term').catch(e => { throw new Error(`top_tracks_long: ${e.message}`) }),
+        getTopArtists(token).catch(e => { throw new Error(`top_artists: ${e.message}`) }),
+        getRecentlyPlayed(token).catch(e => { throw new Error(`recently_played: ${e.message}`) }),
       ])
 
     const artists: SpotifyArtist[] = topArtists.map(a => ({
