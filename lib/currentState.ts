@@ -127,19 +127,23 @@ export function computeCurrentState(
   }
 }
 
+function fmt(n: number): string {
+  return isFinite(n) ? String(Math.round(n * 100)) : '—'
+}
+
 function buildDataLine(
   q: MoodQuadrant, val: number, eng: number,
   valDelta: number, engDelta: number
 ): string {
   switch (q) {
     case 'alive':
-      return `Recent avg energy: ${Math.round(eng * 100)}/100. Valence: ${Math.round(val * 100)}/100. Both running above your 6-month norm.`
+      return `Recent avg energy: ${fmt(eng)}/100. Valence: ${fmt(val)}/100. Both running above your 6-month norm.`
     case 'soft':
-      return `Valence avg: ${Math.round(val * 100)}/100. Energy avg: ${Math.round(eng * 100)}/100. Lower pressure than usual${engDelta < -0.05 ? ' — energy dropped recently' : ''}.`
+      return `Valence avg: ${fmt(val)}/100. Energy avg: ${fmt(eng)}/100. Lower pressure than usual${engDelta < -0.05 ? ' — energy dropped recently' : ''}.`
     case 'restless':
-      return `Energy avg: ${Math.round(eng * 100)}/100 — elevated. Valence avg: ${Math.round(val * 100)}/100 — below center${valDelta < -0.05 ? ', and falling' : ''}.`
+      return `Energy avg: ${fmt(eng)}/100 — elevated. Valence avg: ${fmt(val)}/100 — below center${valDelta < -0.05 ? ', and falling' : ''}.`
     case 'heavy':
-      return `Valence avg: ${Math.round(val * 100)}/100. Energy avg: ${Math.round(eng * 100)}/100.${valDelta < -0.06 ? ` That's ${Math.round(Math.abs(valDelta) * 100)} points lower than your 6-month average.` : ' Both below your baseline.'}`
+      return `Valence avg: ${fmt(val)}/100. Energy avg: ${fmt(eng)}/100.${isFinite(valDelta) && valDelta < -0.06 ? ` That's ${Math.round(Math.abs(valDelta) * 100)} points lower than your 6-month average.` : ' Both below your baseline.'}`
   }
 }
 

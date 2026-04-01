@@ -75,12 +75,23 @@ export async function POST(req: NextRequest) {
       danceability: 0,
     }]
     // Short-term proxy: slightly shift based on recent vs medium popularity delta
-    const shortPopAvg  = shortTracks.length  ? shortTracks.reduce((s, t)  => s + t.popularity, 0) / shortTracks.length  : 50
-    const mediumPopAvg = mediumTracks.length ? mediumTracks.reduce((s, t) => s + t.popularity, 0) / mediumTracks.length : 50
-    const popRatio = (shortPopAvg - mediumPopAvg) / 100  // small delta, [-0.5, 0.5]
-    const shortProxy = [{ ...proxyFeatures[0], valence: Math.max(0, Math.min(1, result.scores.valenceAvg + popRatio * 0.3)) }]
+    // Use filter to guard against tracks with undefined popularity
+    const safeNum = (v: unknown) => typeof v === 'number' && isFinite(v) ? v : null
+    const shortPops  = shortTracks.map(t => safeNum(t.popularity)).filter((v): v is number => v !== null)
+    const mediumPops = mediumTracks.map(t => safeNum(t.popularity)).filter((v): v is number => v !== null)
+    const shortPopAvg  = shortPops.length  ? shortPops.reduce((s, v)  => s + v, 0) / shortPops.length  : 50
+    const mediumPopAvg = mediumPops.length ? mediumPops.reduce((s, v) => s + v, 0) / mediumPops.length : 50
+    const popRatio = (shortPopAvg - mediumPopAvg) / 100
 
-    const currentState = computeCurrentState(shortProxy, proxyFeatures)
+    const baseValence = safeNum(result.scores.valenceAvg) ?? 0.55
+    const baseEnergy  = safeNum(result.scores.energyAvg)  ?? 0.55
+    const shortProxy = [{ ...proxyFeatures[0],
+      valence: Math.max(0, Math.min(1, baseValence + popRatio * 0.3)),
+      energy:  baseEnergy,
+    }]
+    const mediumProxy = [{ ...proxyFeatures[0], valence: baseValence, energy: baseEnergy }]
+
+    const currentState = computeCurrentState(shortProxy, mediumProxy)
 
     return NextResponse.json({
       archetype:       result.archetype,
