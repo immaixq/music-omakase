@@ -1,65 +1,124 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { buildAuthUrl, generatePKCE } from '@/lib/spotify'
+
+export default function Landing() {
+  const router  = useRouter()
+  const [handle, setHandle]   = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function connectSpotify() {
+    if (loading) return
+    setLoading(true)
+    sessionStorage.clear()
+    sessionStorage.setItem('handle', handle.trim() || 'you')
+
+    const state = crypto.randomUUID()
+    const { verifier, challenge } = await generatePKCE()
+    sessionStorage.setItem('pkce_verifier', verifier)
+    sessionStorage.setItem('oauth_state',   state)
+
+    window.location.href = buildAuthUrl(challenge, state)
+  }
+
+  function tryDemo() {
+    sessionStorage.clear()
+    sessionStorage.setItem('handle', handle.trim() || 'you')
+    router.push('/loading')
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="min-h-screen flex flex-col items-center justify-center px-6 relative overflow-hidden">
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(0deg, transparent, transparent 39px, #1a1a1a 40px)',
+          opacity: 0.4,
+        }}
+      />
+
+      <div className="relative z-10 max-w-lg w-full">
+        <p
+          className="text-xs tracking-[0.3em] uppercase mb-16 opacity-50"
+          style={{ fontFamily: 'Courier New, monospace' }}
+        >
+          VIBE-ID · AUDIT SYSTEM
+        </p>
+
+        <h1
+          className="text-4xl sm:text-5xl font-bold leading-tight mb-3"
+          style={{ fontFamily: 'Georgia, serif', letterSpacing: '-0.02em' }}
+        >
+          Your music has been
+          <br />
+          keeping a diary.
+        </h1>
+
+        <p className="text-xl mb-12 opacity-60" style={{ fontFamily: 'Courier New, monospace' }}>
+          We read it.
+        </p>
+
+        {/* Name input */}
+        <div className="mb-4">
+          <label
+            className="block text-xs tracking-[0.2em] uppercase opacity-40 mb-2"
+            style={{ fontFamily: 'Courier New, monospace' }}
+            htmlFor="handle"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Who's getting audited?
+          </label>
+          <input
+            id="handle"
+            type="text"
+            value={handle}
+            onChange={e => setHandle(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && connectSpotify()}
+            placeholder="your name or @handle"
+            maxLength={32}
+            className="w-full bg-transparent border border-[#2a2a2a] px-4 py-3 text-sm outline-none focus:border-[#f0ede6] transition-colors placeholder:opacity-20"
+            style={{ fontFamily: 'Courier New, monospace' }}
+          />
         </div>
-      </main>
-    </div>
-  );
+
+        {/* Primary CTA — real Spotify */}
+        <button
+          onClick={connectSpotify}
+          disabled={loading}
+          className="group w-full flex items-center justify-between border border-[#f0ede6] px-8 py-4 text-sm tracking-[0.15em] uppercase transition-all duration-200 hover:bg-[#f0ede6] hover:text-[#0d0d0d] disabled:opacity-40 mb-3"
+          style={{ fontFamily: 'Courier New, monospace' }}
+        >
+          {loading ? 'Connecting...' : 'Connect Spotify'}
+          <span className="opacity-40 group-hover:opacity-100 transition-opacity">→</span>
+        </button>
+
+        {/* Secondary CTA — demo */}
+        <button
+          onClick={tryDemo}
+          className="w-full text-xs opacity-30 hover:opacity-60 transition-opacity py-2 tracking-widest uppercase"
+          style={{ fontFamily: 'Courier New, monospace' }}
+        >
+          or try demo first
+        </button>
+
+        <p className="mt-8 text-xs opacity-20" style={{ fontFamily: 'Courier New, monospace' }}>
+          No questions. No self-reporting. Just your data.
+        </p>
+      </div>
+
+      <div
+        className="absolute bottom-8 left-6 right-6 flex justify-between text-xs opacity-10"
+        style={{ fontFamily: 'Courier New, monospace' }}
+        aria-hidden
+      >
+        <span>THE LATE NIGHT DRIVER</span>
+        <span>THE HYPE ARCHITECT</span>
+        <span className="hidden sm:block">THE SOFT LAUNCH</span>
+        <span className="hidden sm:block">THE STATIC</span>
+      </div>
+    </main>
+  )
 }
