@@ -11,6 +11,10 @@ const ALL_TYPES: ArchetypeKey[] = [
   'hype-architect',
   'soft-launch',
   'the-static',
+  'the-completionist',
+  'the-signal',
+  'the-mainframe',
+  'the-time-capsule',
 ]
 
 export default function CompatibilityPage() {

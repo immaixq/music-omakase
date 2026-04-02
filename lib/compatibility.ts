@@ -124,6 +124,120 @@ const REPORTS: Partial<Record<PairKey, CompatibilityReport>> = {
     warning:  "The Signal moves on before the Late Night Driver is done feeling it.",
     chemistry: "Every recommendation from the Signal lands harder than it should. That's the pairing working.",
   },
+
+  // ─── Remaining pairs ──────────────────────────────────────────────────────
+
+  [key('late-night-driver', 'the-completionist')]: {
+    score:    75,
+    verdict:  "one goes deep emotionally, the other goes deep catalogically.",
+    dynamic:  "The Late Night Driver wants to feel a song completely. The Completionist wants to hear everything an artist has ever recorded. The axis is different — one is vertical (emotion), one is horizontal (breadth) — but both refuse to be casual listeners. They understand each other's commitment without needing to explain it.",
+    warning:  "The Late Night Driver will attach meaning to a song the Completionist has already categorised and filed.",
+    chemistry: "Both of them finish what they start. That's rare and they both know it.",
+  },
+
+  [key('late-night-driver', 'the-mainframe')]: {
+    score:    70,
+    verdict:  "the Mainframe plays it first, the Late Night Driver plays it until it means something.",
+    dynamic:  "The Mainframe is culturally synchronized — they're on the right artists at the right time. The Late Night Driver is emotionally synchronized — they're in the right mood for the right song. Together: the Mainframe provides the music, the Late Night Driver provides the feeling. This works better than either expected.",
+    warning:  "The Late Night Driver will still be processing a song the Mainframe stopped playing three weeks ago.",
+    chemistry: "When the Mainframe's recommendation hits the Late Night Driver at exactly the right moment — that's the whole pairing in one exchange.",
+  },
+
+  [key('hype-architect', 'the-completionist')]: {
+    score:    40,
+    verdict:  "one is already at the next song, the other hasn't finished the first album.",
+    dynamic:  "The Hype Architect evaluates a song in 20 seconds and moves on. The Completionist won't skip a B-side. This pairing operates in completely different time scales, and both will find the other slightly baffling. The Hype Architect thinks the Completionist is stuck. The Completionist thinks the Hype Architect has never really listened to anything.",
+    warning:  "The Hype Architect will skip the deep cut the Completionist considers essential.",
+    chemistry: "The Hype Architect will occasionally stumble onto something great fast — and the Completionist will make it last.",
+  },
+
+  [key('hype-architect', 'the-signal')]: {
+    score:    55,
+    verdict:  "both underground, completely different motivations.",
+    dynamic:  "The Signal ends up ahead because they're genuinely curious and focused. The Hype Architect ends up ahead because they move so fast they skip mainstream entirely. Both find themselves listening to things most people haven't heard yet — but via different mechanisms. Respect, but low trust. They don't fully understand each other's process.",
+    warning:  "The Signal will take the Hype Architect's taste less seriously once they learn why they're listening.",
+    chemistry: "Combined, they've heard more new music in the last month than most people hear in a year.",
+  },
+
+  [key('hype-architect', 'the-time-capsule')]: {
+    score:    35,
+    verdict:  "one is always ahead, the other is permanently somewhere else.",
+    dynamic:  "The Hype Architect has already decided about the future. The Time Capsule is still living in a specific past. They share almost no musical overlap, and their relationship to time is opposite in every way. What one values — speed, newness, performance — the other doesn't register as relevant at all.",
+    warning:  "The Time Capsule will play a song from six years ago. The Hype Architect will not understand why.",
+    chemistry: "The Hype Architect can occasionally jolt the Time Capsule into the present. That's the value — rare, but real.",
+  },
+
+  [key('soft-launch', 'the-signal')]: {
+    score:    60,
+    verdict:  "the Signal keeps knocking on a door the Soft Launch has decided is closed.",
+    dynamic:  "The Soft Launch has a vibe and protects it. The Signal constantly has new music to introduce. This creates a gentle, persistent friction — the Signal isn't wrong, but the Soft Launch isn't wrong either. The Soft Launch will come around eventually, on their own terms, which the Signal finds maddening.",
+    warning:  "The Soft Launch will reject three recommendations before eventually admitting the fourth is perfect.",
+    chemistry: "When the Signal finds something that actually fits the Soft Launch's world — it stays there forever.",
+  },
+
+  [key('soft-launch', 'the-mainframe')]: {
+    score:    55,
+    verdict:  "one curates a world, the other calibrates to the culture.",
+    dynamic:  "The Soft Launch is specific and somewhat resistant to mainstream. The Mainframe is synchronized with what the culture is doing. This pairing will agree on almost nothing to put on — but the disagreements are polite and interesting. The Soft Launch finds the Mainframe's taste a little obvious. The Mainframe finds the Soft Launch a little precious.",
+    warning:  "The Mainframe will play something on the charts. The Soft Launch will change the subject.",
+    chemistry: "The Soft Launch shows the Mainframe what curation actually looks like. Sometimes that sticks.",
+  },
+
+  [key('soft-launch', 'the-time-capsule')]: {
+    score:    80,
+    verdict:  "two people who know exactly what they're protecting.",
+    dynamic:  "The Soft Launch guards a vibe. The Time Capsule guards a relationship with specific artists across years. Neither is in a hurry. Neither plays something by accident. There's a mutual respect here that doesn't require much explanation — both understand that music is something you choose carefully, not something that just happens to you.",
+    warning:  "Neither of them will push the other to hear anything new. That's comfortable and occasionally limiting.",
+    chemistry: "The most deliberate pairing. Every song that makes it to a shared playlist was earned.",
+  },
+
+  [key('the-static', 'the-mainframe')]: {
+    score:    58,
+    verdict:  "both curious, pointed in completely different directions.",
+    dynamic:  "The Static explores everything chaotically — six genres in a week, no consistent thread. The Mainframe explores the cultural mainstream with precision. They share the quality of curiosity but have no overlap in what they find interesting. Good conversations about why they listen to what they listen to. Difficult conversations about what to actually put on.",
+    warning:  "The Static's chaos will exhaust the Mainframe's need for coherence.",
+    chemistry: "The Static occasionally stumbles into something mainstream that the Mainframe already knows. That moment of accidental alignment is oddly satisfying.",
+  },
+
+  [key('the-static', 'the-time-capsule')]: {
+    score:    42,
+    verdict:  "one contains every era simultaneously, the other lives in one era completely.",
+    dynamic:  "The Static moves through everything — past, present, obscure, mainstream — without settling anywhere. The Time Capsule has found their artists and stayed. They're both loyal in a sense, but to completely different things: the Static is loyal to the idea of music, the Time Capsule is loyal to specific artists. Neither can fully follow the other.",
+    warning:  "The Static will move on from something the Time Capsule still considers essential.",
+    chemistry: "If the Static's exploration accidentally overlaps with the Time Capsule's artists — that recognition is surprising and genuine.",
+  },
+
+  [key('the-completionist', 'the-mainframe')]: {
+    score:    65,
+    verdict:  "both go deep — just into different territory.",
+    dynamic:  "The Completionist goes deep into artists nobody talks about enough. The Mainframe goes deep into artists everyone is talking about right now. The depth is the same; the direction is different. Surprisingly compatible in practice — both bring real knowledge to the conversation, neither is skimming. The Completionist will expand the Mainframe's catalog history. The Mainframe will keep the Completionist from missing the present.",
+    warning:  "The Completionist will consider the Mainframe's artists too obvious. The Mainframe will find the Completionist's artists too niche.",
+    chemistry: "Both of them have opinions worth listening to. That's rarer than it sounds.",
+  },
+
+  [key('the-completionist', 'the-time-capsule')]: {
+    score:    87,
+    verdict:  "two kinds of devotion, pointing in the same direction.",
+    dynamic:  "The Completionist commits to finishing an artist's entire catalog. The Time Capsule commits to carrying artists across years. The form is different but the substance is identical: both believe that real listening means returning, deepening, not moving on until you've heard everything it has to say. This is the highest-loyalty pairing on the board.",
+    warning:  "Neither of them will ever suggest anything new. They'll need outside interference to discover anything after month three.",
+    chemistry: "Every shared playlist is a work of care. No skip. No filler. No accident.",
+  },
+
+  [key('the-signal', 'the-mainframe')]: {
+    score:    45,
+    verdict:  "opposite ends of the same spectrum, both convinced they're right.",
+    dynamic:  "The Signal tracks artists before they're known. The Mainframe tracks artists at peak cultural relevance. They're measuring the same thing — quality — but from opposite sides of the popularity curve. The Signal thinks the Mainframe is late. The Mainframe thinks the Signal is too ahead of the room to be useful.",
+    warning:  "The Signal will claim they heard it first. The Mainframe will say it doesn't matter when you heard it, only whether it's good now.",
+    chemistry: "The Signal shows the Mainframe what's coming. Sometimes the Mainframe is the first mainstream person to listen. That moment — the Signal's discovery meeting the Mainframe's timing — is when they actually understand each other.",
+  },
+
+  [key('the-signal', 'the-time-capsule')]: {
+    score:    52,
+    verdict:  "one is always arriving, the other is never leaving.",
+    dynamic:  "The Signal is perpetually ahead — discovering, moving, not looking back. The Time Capsule found their artists and stayed. Neither is wrong. The Signal finds the future first; the Time Capsule knows the past better than anyone. They don't share music often, but when they do, it's always deliberate.",
+    warning:  "The Signal will recommend something new. The Time Capsule will listen once and return to what they already know.",
+    chemistry: "If the Signal discovers an artist the Time Capsule already loved years ago — that convergence across time is surprisingly meaningful to both of them.",
+  },
 }
 
 // Fallback for same-type pairs
@@ -135,7 +249,15 @@ const SAME_TYPE: CompatibilityReport = {
   chemistry: "Complete mutual understanding. Occasionally suffocating.",
 }
 
+const UNKNOWN_PAIR: CompatibilityReport = {
+  score:    60,
+  verdict:  "different worlds, probably interesting.",
+  dynamic:  "These types don't share obvious signals, which is exactly when things get interesting. Neither is predictable to the other. The listening styles are different enough that there's genuine curiosity in both directions — if both are willing to stay with it.",
+  warning:  "You'll need patience to find the overlap. It's there, but it takes work.",
+  chemistry: "When it clicks, it's because you stopped expecting the other person to listen the way you do.",
+}
+
 export function getCompatibilityReport(a: ArchetypeKey, b: ArchetypeKey): CompatibilityReport {
   if (a === b) return SAME_TYPE
-  return REPORTS[key(a, b)] ?? SAME_TYPE
+  return REPORTS[key(a, b)] ?? UNKNOWN_PAIR
 }
