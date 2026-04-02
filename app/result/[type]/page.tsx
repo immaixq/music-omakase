@@ -77,31 +77,31 @@ export default function ResultPage() {
 
       <div className="max-w-lg w-full">
         {/* Label + handle */}
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 0.4 }} transition={{ duration: 0.6 }}
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 0.3 }} transition={{ duration: 0.6 }}
           className="text-xs tracking-[0.3em] uppercase mb-2"
           style={{ fontFamily: 'Courier New, monospace' }}>
-          AUDIT COMPLETE
+          VIBE·ID
         </motion.p>
         {handle && (
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-sm mb-6" style={{ fontFamily: 'Courier New, monospace' }}>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-sm mb-8" style={{ fontFamily: 'Courier New, monospace' }}>
             {handle}
           </motion.p>
         )}
 
-        {/* Archetype art mark */}
+        {/* Archetype illustration — the visual identity */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          className="mb-6">
-          <ArchetypeArt archetype={key} color={archetype.color} size={96} animate />
+          initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-8">
+          <ArchetypeArt archetype={key} color={archetype.color} size={160} animate />
         </motion.div>
 
-        {/* Primary archetype */}
+        {/* Primary archetype name */}
         <motion.h1
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
-          className="text-5xl sm:text-6xl font-bold leading-none mb-8"
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="text-5xl sm:text-6xl font-bold leading-none mb-4"
           style={{ fontFamily: 'Georgia, serif', letterSpacing: '-0.02em', color: archetype.color }}>
           {archetype.name}
         </motion.h1>
@@ -111,15 +111,22 @@ export default function ResultPage() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="mb-7">
-            <p className="text-xs tracking-[0.2em] uppercase opacity-25 mb-1"
+            className="mb-8 flex items-center gap-3">
+            <span className="text-xs opacity-20 tracking-[0.15em] uppercase"
               style={{ fontFamily: 'Courier New, monospace' }}>
-              listener DNA
-            </p>
-            <p className="text-base font-medium"
-              style={{ fontFamily: 'Georgia, serif', color: archetype.color, opacity: 0.85 }}>
-              {result.listenerDNA.tag}
-            </p>
+              dna
+            </span>
+            <span className="h-px flex-1 opacity-10" style={{ background: archetype.color }} />
+            <span className="text-sm tracking-[0.08em]"
+              style={{ fontFamily: 'Courier New, monospace', color: archetype.color, opacity: 0.7 }}>
+              {result.listenerDNA.axisA}
+            </span>
+            <span className="text-xs opacity-20" style={{ fontFamily: 'Courier New, monospace' }}>×</span>
+            <span className="text-sm tracking-[0.08em]"
+              style={{ fontFamily: 'Courier New, monospace', color: archetype.color, opacity: 0.7 }}>
+              {result.listenerDNA.axisB}
+            </span>
+            <span className="h-px flex-1 opacity-10" style={{ background: archetype.color }} />
           </motion.div>
         )}
 
@@ -127,9 +134,9 @@ export default function ResultPage() {
         <AnimatePresence>
           {phases('confession','shadow','full','profile','letter','card') && (
             <motion.p key="confession"
-              initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-lg sm:text-xl mb-8 italic"
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              className="text-2xl sm:text-3xl mb-10 italic leading-snug"
               style={{ fontFamily: 'Georgia, serif' }}>
               &ldquo;{result.confessionLine}&rdquo;
             </motion.p>
