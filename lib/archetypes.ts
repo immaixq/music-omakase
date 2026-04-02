@@ -1,4 +1,61 @@
-export type ArchetypeKey = 'late-night-driver' | 'hype-architect' | 'soft-launch' | 'the-static'
+export type ArchetypeKey =
+  | 'late-night-driver'
+  | 'hype-architect'
+  | 'soft-launch'
+  | 'the-static'
+  | 'the-completionist'
+  | 'the-signal'
+  | 'the-mainframe'
+  | 'the-time-capsule'
+
+// ─── Listener DNA ─────────────────────────────────────────────────────────────
+// Two independent axes that combine into a unique sub-identity tag.
+// Axis A = when/how you listen (time + pattern behavior)
+// Axis B = what you listen to (taste territory)
+
+export type DNAAxisA = 'Midnight' | 'Ritual' | 'Restless'
+export type DNAAxisB = 'Seeker' | 'Architect' | 'Nester' | 'Archivist'
+
+export interface ListenerDNA {
+  axisA: DNAAxisA
+  axisB: DNAAxisB
+  tag:   string  // e.g. "Midnight Archivist"
+}
+
+export function computeListenerDNA(
+  lateNightRatio:   number,
+  loyalty:          number,
+  trackNoveltyRatio: number,
+  discovery:        number,
+  intensity:        number,
+  acousticAvg:      number,
+): ListenerDNA {
+  // Axis A — time/pattern
+  let axisA: DNAAxisA
+  if (lateNightRatio > 0.28) {
+    axisA = 'Midnight'
+  } else if (loyalty > 62 && trackNoveltyRatio < 0.30) {
+    axisA = 'Ritual'
+  } else {
+    axisA = 'Restless'
+  }
+
+  // Axis B — taste territory
+  let axisB: DNAAxisB
+  if (discovery > 58) {
+    axisB = 'Seeker'
+  } else if (intensity > 65 && acousticAvg < 0.35) {
+    axisB = 'Architect'
+  } else if (acousticAvg > 0.38 || intensity < 42) {
+    axisB = 'Nester'
+  } else {
+    axisB = 'Archivist'
+  }
+
+  return { axisA, axisB, tag: `${axisA} ${axisB}` }
+}
+
+// ─── Archetype shape ──────────────────────────────────────────────────────────
 
 export interface ConfessionVariant {
   condition: 'high_genre_entropy' | 'late_night' | 'high_skip' | 'default'
@@ -6,15 +63,17 @@ export interface ConfessionVariant {
 }
 
 export interface Archetype {
-  key: ArchetypeKey
-  name: string
-  tagline: string
-  description: string
-  color: string
-  confessions: ConfessionVariant[]
+  key:                   ArchetypeKey
+  name:                  string
+  tagline:               string
+  description:           string
+  color:                 string
+  confessions:           ConfessionVariant[]
   dataHighlightTemplate: string
-  visualClass: string
+  visualClass:           string
 }
+
+// ─── Archetype definitions ────────────────────────────────────────────────────
 
 export const archetypes: Record<ArchetypeKey, Archetype> = {
   'late-night-driver': {
@@ -33,6 +92,7 @@ export const archetypes: Record<ArchetypeKey, Archetype> = {
     dataHighlightTemplate: 'Your mood range is wider than {pct}% of users. You don\'t pick a lane.',
     visualClass: 'archetype-amber',
   },
+
   'hype-architect': {
     key: 'hype-architect',
     name: 'The Hype Architect',
@@ -49,6 +109,7 @@ export const archetypes: Record<ArchetypeKey, Archetype> = {
     dataHighlightTemplate: 'Energy index: {pct}/100. You run harder than most listeners.',
     visualClass: 'archetype-electric',
   },
+
   'soft-launch': {
     key: 'soft-launch',
     name: 'The Soft Launch',
@@ -65,6 +126,7 @@ export const archetypes: Record<ArchetypeKey, Archetype> = {
     dataHighlightTemplate: 'You return to the same {count} artists more than anyone. That\'s a comfort, not a rut.',
     visualClass: 'archetype-sage',
   },
+
   'the-static': {
     key: 'the-static',
     name: 'The Static',
@@ -81,7 +143,77 @@ export const archetypes: Record<ArchetypeKey, Archetype> = {
     dataHighlightTemplate: '{genres} distinct genres this year. Most people stay inside 4.',
     visualClass: 'archetype-static',
   },
+
+  'the-completionist': {
+    key: 'the-completionist',
+    name: 'The Completionist',
+    tagline: "You don't just listen to artists — you finish them.",
+    description:
+      "Your loyalty scores are among the highest we see. You return to the same artists across every time window — not out of habit, but because you haven't finished yet. You know the B-sides, the deep cuts, the one track on the third album nobody talks about. You've formed opinions about songs most people have never heard. When you commit to an artist, the relationship is real.",
+    color: '#4a6fa5',
+    confessions: [
+      { condition: 'high_genre_entropy', line: 'has opinions about albums most fans pretend to have heard.' },
+      { condition: 'late_night',         line: 'replays the same song until they\'ve heard everything in it.' },
+      { condition: 'high_skip',          line: 'skips straight to the deep cuts.' },
+      { condition: 'default',            line: 'has opinions about the worst song on their favorite album.' },
+    ],
+    dataHighlightTemplate: 'You\'ve returned to the same {count} artists across all six months. That\'s not a habit — that\'s a commitment.',
+    visualClass: 'archetype-navy',
+  },
+
+  'the-signal': {
+    key: 'the-signal',
+    name: 'The Signal',
+    tagline: 'The algorithm recommends you to other people.',
+    description:
+      "Your average artist popularity sits well below the mainstream — not because you're trying, but because you found something real before anyone else did. Your listening isn't chaotic, it's just ahead. The artists you've been playing for months will be everywhere in six. You don't follow the curve. You are the curve.",
+    color: '#a8a8a8',
+    confessions: [
+      { condition: 'late_night',         line: 'hears an artist\'s first album on the night it drops.' },
+      { condition: 'high_genre_entropy', line: 'knew about the genre before it had a name.' },
+      { condition: 'high_skip',          line: 'moves on before the hype catches up.' },
+      { condition: 'default',            line: 'the algorithm recommends them to other people.' },
+    ],
+    dataHighlightTemplate: 'Average artist popularity: {pct}/100. You\'re listening to artists most people haven\'t found yet.',
+    visualClass: 'archetype-signal',
+  },
+
+  'the-mainframe': {
+    key: 'the-mainframe',
+    name: 'The Mainframe',
+    tagline: "You're not following the cultural moment — you're calibrating it.",
+    description:
+      "Your listening has an uncanny alignment with what becomes popular. Not because you're chasing trends, but because your taste is genuinely synchronized with the cultural current. The artists you play are at peak popularity. The genres you gravitate toward are the ones everyone ends up listening to — you were just there when it mattered.",
+    color: '#e8c97a',
+    confessions: [
+      { condition: 'late_night',         line: 'already has the playlist the moment the artist drops something.' },
+      { condition: 'high_genre_entropy', line: 'moves between genres the way the culture does — one step ahead.' },
+      { condition: 'high_skip',          line: 'knew which songs would be hits before they were.' },
+      { condition: 'default',            line: 'if they made a playlist, it\'d chart.' },
+    ],
+    dataHighlightTemplate: 'Average artist popularity: {pct}/100. Your taste runs parallel to the cultural moment.',
+    visualClass: 'archetype-gold',
+  },
+
+  'the-time-capsule': {
+    key: 'the-time-capsule',
+    name: 'The Time Capsule',
+    tagline: 'Your music never forgot who you were.',
+    description:
+      "The artists you're listening to this month are the same ones you were listening to a year ago. Not because you're stuck — because you were right the first time. You've built a relationship with specific artists that outlasts every phase you've been through. When you find something real, you keep it. Some things don't need to change.",
+    color: '#c4956a',
+    confessions: [
+      { condition: 'late_night',         line: 'has songs that take them back to a specific year without trying.' },
+      { condition: 'high_genre_entropy', line: 'carries multiple eras of themselves in a single playlist.' },
+      { condition: 'high_skip',          line: 'skips straight to the song that meant something.' },
+      { condition: 'default',            line: 'still discovering new layers in songs they\'ve heard 300 times.' },
+    ],
+    dataHighlightTemplate: '{count} of your current top artists have been with you for over a year. Some things don\'t leave.',
+    visualClass: 'archetype-sepia',
+  },
 }
+
+// ─── Confession line selector ─────────────────────────────────────────────────
 
 export function getConfessionLine(
   archetype: ArchetypeKey,

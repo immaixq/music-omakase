@@ -1,4 +1,4 @@
-import type { ArchetypeKey } from './archetypes'
+import type { ArchetypeKey, ListenerDNA } from './archetypes'
 import { SHADOW_LINES } from './shadowLines'
 import type { ListenerProfile, DriftSignal } from './scoring'
 import { mockCurrentState, type CurrentState } from './currentState'
@@ -11,6 +11,7 @@ export interface AnalyzeResult {
   highlight:       string
   handle:          string
   listenerProfile: ListenerProfile
+  listenerDNA:     ListenerDNA
   drift:           DriftSignal
   letter:          [string, string, string]
   waveformData:    { valence: number[]; energy: number[] }
@@ -20,17 +21,25 @@ export interface AnalyzeResult {
 }
 
 const CONFESSION_LINES: Record<ArchetypeKey, string> = {
-  'late-night-driver': "still has playlists named after people who don't know it.",
-  'hype-architect':    "has already decided whether they like a song before it ends.",
-  'soft-launch':       "curates the vibe for everyone else, rarely for themselves.",
-  'the-static':        "fell asleep to metal and woke up to bossa nova. on purpose.",
+  'late-night-driver':  "still has playlists named after people who don't know it.",
+  'hype-architect':     "has already decided whether they like a song before it ends.",
+  'soft-launch':        "curates the vibe for everyone else, rarely for themselves.",
+  'the-static':         "fell asleep to metal and woke up to bossa nova. on purpose.",
+  'the-completionist':  "has opinions about the worst song on their favorite album.",
+  'the-signal':         "the algorithm recommends them to other people.",
+  'the-mainframe':      "if they made a playlist, it'd chart.",
+  'the-time-capsule':   "still discovering new layers in songs they've heard 300 times.",
 }
 
 const HIGHLIGHTS: Record<ArchetypeKey, string> = {
-  'late-night-driver': "Your mood range is wider than 87% of users. You don't pick a lane.",
-  'hype-architect':    "Average BPM: 134. You move faster than 91% of listeners.",
-  'soft-launch':       "You return to the same 6 artists more than anyone. That's a comfort, not a rut.",
-  'the-static':        "31 distinct genres this year. Most people stay inside 4.",
+  'late-night-driver':  "Your mood range is wider than 87% of users. You don't pick a lane.",
+  'hype-architect':     "Average BPM: 134. You move faster than 91% of listeners.",
+  'soft-launch':        "You return to the same 6 artists more than anyone. That's a comfort, not a rut.",
+  'the-static':         "31 distinct genres this year. Most people stay inside 4.",
+  'the-completionist':  "You've returned to the same 4 artists across all six months. That's not a habit — that's a commitment.",
+  'the-signal':         "Average artist popularity: 28/100. You're listening to artists most people haven't found yet.",
+  'the-mainframe':      "Average artist popularity: 78/100. Your taste runs parallel to the cultural moment.",
+  'the-time-capsule':   "5 of your current top artists have been with you for over a year. Some things don't leave.",
 }
 
 const MOCK_LETTERS: Record<ArchetypeKey, [string, string, string]> = {
@@ -54,13 +63,48 @@ const MOCK_LETTERS: Record<ArchetypeKey, [string, string, string]> = {
     "Not as a person — as a listener. 31 distinct genres in the last six months. Most people stay inside four.",
     "There's no pattern here that holds for longer than six weeks. You keep outrunning it. That's intentional.",
   ],
+  'the-completionist': [
+    "You haven't finished with these artists yet.",
+    "Your loyalty scores sit in the top range — you return to the same names across every time window, not because you're stuck, but because there's still more to find. Most listeners skim the surface. You go all the way down.",
+    "There are tracks in your history that most fans of the same artists have never played. You found them. You went back.",
+  ],
+  'the-signal': [
+    "You are not trying to be ahead of the curve.",
+    "You just are. Your average artist popularity sits well below the mainstream — not because you're making a point, but because something real caught your attention before anyone else got there.",
+    "In six months, a few of these artists will be everywhere. You'll remember when it was just yours.",
+  ],
+  'the-mainframe': [
+    "Your taste is synchronized with the cultural moment.",
+    "Not because you're following it — because you're part of it. The artists you listen to sit at peak popularity. You're not chasing the wave; you're just already on it, naturally.",
+    "If your Spotify history were public, it would look like a cultural index. The algorithm loves you. You are its ideal case.",
+  ],
+  'the-time-capsule': [
+    "The artists you're listening to today are the same ones you were listening to a year ago.",
+    "That overlap between your short-term and long-term listening is significant. Most people cycle through artists faster than this. You don't. When you find something real, it stays.",
+    "There are probably songs in your history that take you back to a specific moment immediately, without warning. That's not nostalgia. That's a high-fidelity emotional record.",
+  ],
 }
 
 const MOCK_PROFILES: Record<ArchetypeKey, ListenerProfile> = {
-  'late-night-driver': { discovery: 61, loyalty: 72, emotionalRange: 84, intensity: 58 },
-  'hype-architect':    { discovery: 44, loyalty: 38, emotionalRange: 52, intensity: 91 },
-  'soft-launch':       { discovery: 29, loyalty: 87, emotionalRange: 31, intensity: 42 },
-  'the-static':        { discovery: 88, loyalty: 21, emotionalRange: 79, intensity: 65 },
+  'late-night-driver':  { discovery: 61, loyalty: 72, emotionalRange: 84, intensity: 58 },
+  'hype-architect':     { discovery: 44, loyalty: 38, emotionalRange: 52, intensity: 91 },
+  'soft-launch':        { discovery: 29, loyalty: 87, emotionalRange: 31, intensity: 42 },
+  'the-static':         { discovery: 88, loyalty: 21, emotionalRange: 79, intensity: 65 },
+  'the-completionist':  { discovery: 22, loyalty: 94, emotionalRange: 48, intensity: 55 },
+  'the-signal':         { discovery: 91, loyalty: 52, emotionalRange: 66, intensity: 70 },
+  'the-mainframe':      { discovery: 35, loyalty: 61, emotionalRange: 58, intensity: 74 },
+  'the-time-capsule':   { discovery: 18, loyalty: 89, emotionalRange: 44, intensity: 47 },
+}
+
+const MOCK_DNA: Record<ArchetypeKey, ListenerDNA> = {
+  'late-night-driver':  { axisA: 'Midnight', axisB: 'Archivist', tag: 'Midnight Archivist' },
+  'hype-architect':     { axisA: 'Restless', axisB: 'Architect', tag: 'Restless Architect' },
+  'soft-launch':        { axisA: 'Ritual',   axisB: 'Nester',    tag: 'Ritual Nester' },
+  'the-static':         { axisA: 'Restless', axisB: 'Seeker',    tag: 'Restless Seeker' },
+  'the-completionist':  { axisA: 'Ritual',   axisB: 'Archivist', tag: 'Ritual Archivist' },
+  'the-signal':         { axisA: 'Midnight', axisB: 'Seeker',    tag: 'Midnight Seeker' },
+  'the-mainframe':      { axisA: 'Restless', axisB: 'Architect', tag: 'Restless Architect' },
+  'the-time-capsule':   { axisA: 'Ritual',   axisB: 'Nester',    tag: 'Ritual Nester' },
 }
 
 const NO_DRIFT: DriftSignal = {
@@ -68,7 +112,6 @@ const NO_DRIFT: DriftSignal = {
   valenceDelta: 0, energyDelta: 0, line: '',
 }
 
-// Plausible mock waveforms per archetype
 const MOCK_WAVEFORMS: Record<ArchetypeKey, { valence: number[]; energy: number[] }> = {
   'late-night-driver': {
     valence: [0.4,0.6,0.3,0.7,0.2,0.8,0.35,0.65,0.25,0.55,0.45,0.75,0.3,0.5,0.4,0.6,0.2,0.7,0.45,0.35,0.6,0.5,0.3,0.65],
@@ -86,13 +129,33 @@ const MOCK_WAVEFORMS: Record<ArchetypeKey, { valence: number[]; energy: number[]
     valence: [0.3,0.8,0.2,0.9,0.4,0.7,0.1,0.85,0.5,0.25,0.75,0.45,0.6,0.15,0.95,0.35,0.55,0.8,0.2,0.65,0.4,0.9,0.3,0.7],
     energy:  [0.8,0.2,0.9,0.35,0.7,0.15,0.85,0.4,0.6,0.9,0.25,0.75,0.45,0.85,0.3,0.65,0.5,0.2,0.8,0.4,0.7,0.25,0.9,0.55],
   },
+  'the-completionist': {
+    valence: [0.55,0.58,0.52,0.56,0.60,0.54,0.57,0.53,0.59,0.55,0.58,0.52,0.56,0.54,0.57,0.53,0.60,0.55,0.58,0.52,0.56,0.54,0.57,0.55],
+    energy:  [0.48,0.52,0.46,0.50,0.54,0.48,0.51,0.47,0.53,0.49,0.52,0.46,0.50,0.48,0.51,0.47,0.54,0.49,0.52,0.46,0.50,0.48,0.51,0.49],
+  },
+  'the-signal': {
+    valence: [0.45,0.38,0.52,0.35,0.48,0.42,0.55,0.32,0.50,0.40,0.46,0.36,0.53,0.38,0.49,0.43,0.56,0.33,0.51,0.41,0.47,0.37,0.54,0.39],
+    energy:  [0.60,0.55,0.65,0.52,0.62,0.58,0.68,0.50,0.63,0.57,0.61,0.53,0.66,0.55,0.60,0.58,0.70,0.51,0.64,0.56,0.62,0.54,0.67,0.57],
+  },
+  'the-mainframe': {
+    valence: [0.72,0.75,0.70,0.78,0.73,0.76,0.71,0.79,0.74,0.77,0.72,0.75,0.70,0.78,0.73,0.76,0.71,0.79,0.74,0.77,0.72,0.75,0.70,0.78],
+    energy:  [0.68,0.72,0.66,0.74,0.69,0.73,0.67,0.75,0.70,0.73,0.68,0.72,0.66,0.74,0.69,0.73,0.67,0.75,0.70,0.73,0.68,0.72,0.66,0.74],
+  },
+  'the-time-capsule': {
+    valence: [0.62,0.64,0.60,0.63,0.65,0.61,0.63,0.60,0.64,0.62,0.65,0.61,0.63,0.60,0.64,0.62,0.65,0.61,0.63,0.60,0.64,0.62,0.63,0.61],
+    energy:  [0.40,0.42,0.38,0.41,0.43,0.39,0.41,0.38,0.42,0.40,0.43,0.39,0.41,0.38,0.42,0.40,0.43,0.39,0.41,0.38,0.42,0.40,0.41,0.39],
+  },
 }
 
 const PAIRS: [ArchetypeKey, ArchetypeKey][] = [
-  ['late-night-driver', 'the-static'],
-  ['hype-architect',    'late-night-driver'],
-  ['soft-launch',       'late-night-driver'],
-  ['the-static',        'soft-launch'],
+  ['late-night-driver',  'the-static'],
+  ['hype-architect',     'late-night-driver'],
+  ['soft-launch',        'late-night-driver'],
+  ['the-static',         'soft-launch'],
+  ['the-completionist',  'soft-launch'],
+  ['the-signal',         'the-static'],
+  ['the-mainframe',      'hype-architect'],
+  ['the-time-capsule',   'late-night-driver'],
 ]
 
 export function getMockResult(handle: string): AnalyzeResult {
@@ -105,6 +168,7 @@ export function getMockResult(handle: string): AnalyzeResult {
     highlight:       HIGHLIGHTS[archetype],
     handle:          handle || 'you',
     listenerProfile: MOCK_PROFILES[archetype],
+    listenerDNA:     MOCK_DNA[archetype],
     drift:           NO_DRIFT,
     letter:          MOCK_LETTERS[archetype],
     waveformData:    MOCK_WAVEFORMS[archetype],

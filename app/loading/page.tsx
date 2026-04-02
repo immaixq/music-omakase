@@ -14,10 +14,19 @@ const STEPS = [
 
 const STEP_MS = 1100
 
+function getTimeNote(): string | null {
+  const hour = new Date().getHours()
+  if (hour >= 22 || hour < 3)  return "it's late. this feels right."
+  if (hour >= 3  && hour < 6)  return "it's very late. the data noticed."
+  if (hour >= 6  && hour < 9)  return "starting the day with data."
+  return null
+}
+
 export default function LoadingPage() {
-  const router          = useRouter()
-  const [step, setStep] = useState(0)
-  const analyzed        = useRef(false)
+  const router              = useRouter()
+  const [step, setStep]     = useState(0)
+  const [timeNote]          = useState<string | null>(getTimeNote)
+  const analyzed            = useRef(false)
 
   useEffect(() => {
     if (step >= STEPS.length - 1) return
@@ -29,13 +38,19 @@ export default function LoadingPage() {
     if (analyzed.current) return
     analyzed.current = true
 
-    const handle = sessionStorage.getItem('handle') ?? 'you'
-    const token  = sessionStorage.getItem('spotify_token') ?? null
+    const handle        = sessionStorage.getItem('handle') ?? 'you'
+    const token         = sessionStorage.getItem('spotify_token') ?? null
+    const exportPayload = sessionStorage.getItem('export_payload') ?? null
+
+    const body = exportPayload
+      ? { handle, exportData: JSON.parse(exportPayload) }
+      : { handle, token }
+
     const minDelay    = new Promise(r => setTimeout(r, STEP_MS * STEPS.length))
     const fetchResult = fetch('/api/analyze', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ handle, token }),
+      body:    JSON.stringify(body),
     }).then(r => r.json())
 
     Promise.all([minDelay, fetchResult])
@@ -50,11 +65,20 @@ export default function LoadingPage() {
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="max-w-sm w-full">
         <p
-          className="text-xs tracking-[0.3em] uppercase mb-10 opacity-30"
+          className="text-xs tracking-[0.3em] uppercase mb-2 opacity-30"
           style={{ fontFamily: 'Courier New, monospace' }}
         >
           VIBE-ID · AUDIT IN PROGRESS
         </p>
+        {timeNote && (
+          <p
+            className="text-xs mb-8 opacity-25 italic"
+            style={{ fontFamily: 'Courier New, monospace' }}
+          >
+            {timeNote}
+          </p>
+        )}
+        {!timeNote && <div className="mb-10" />}
 
         <div className="space-y-3">
           {STEPS.map((s, i) => (

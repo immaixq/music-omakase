@@ -1,4 +1,5 @@
-import type { ArchetypeKey } from './archetypes'
+import type { ArchetypeKey, ListenerDNA } from './archetypes'
+import { computeListenerDNA } from './archetypes'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ export interface ScoringResult {
     valenceAvg:   number
     acousticAvg:  number
     genreEntropy: number
-    matchRate:    number  // fraction of genres that matched the inference table
+    matchRate:    number
   }
   signals: {
     highGenreEntropy: boolean
@@ -52,6 +53,7 @@ export interface ScoringResult {
     highSkip:         boolean
   }
   listenerProfile: ListenerProfile
+  listenerDNA:     ListenerDNA
   drift:           DriftSignal
   dataHighlight: {
     genres:       number
@@ -105,10 +107,6 @@ export function extractGenreCounts(artists: SpotifyArtist[]): number[] {
 }
 
 // ─── Genre → feature inference ────────────────────────────────────────────────
-// Spotify genre strings are very specific ("permanent wave", "dreamo", "escape room").
-// We match each genre by substring against a scored table [energy, valence, acoustic].
-// Multiple keyword matches per genre are averaged so subgenres inherit parent scores.
-// Unmatched genres are excluded rather than pulling the average toward a neutral 0.5.
 
 // [keyword, energy 0-1, valence 0-1, acoustic 0-1]
 const GENRE_SCORE_MAP: [string, number, number, number][] = [
@@ -191,7 +189,7 @@ interface InferredFeatures {
   energy:       number
   valence:      number
   acousticness: number
-  matchRate:    number  // fraction of genres that matched — quality signal
+  matchRate:    number
 }
 
 function inferFeaturesFromGenres(artists: SpotifyArtist[]): InferredFeatures {
@@ -214,7 +212,6 @@ function inferFeaturesFromGenres(artists: SpotifyArtist[]): InferredFeatures {
       valenceVals.push(avg(hits.map(h => h[2])))
       acousticVals.push(avg(hits.map(h => h[3])))
     }
-    // Unmatched genres are excluded rather than averaging toward 0.5
   }
 
   if (energyVals.length === 0) {
@@ -229,20 +226,13 @@ function inferFeaturesFromGenres(artists: SpotifyArtist[]): InferredFeatures {
   }
 }
 
-// ─── Archetype scoring ────────────────────────────────────────────────────────
-// Each archetype is scored from two independent signal groups:
-//   1. Behavior signals  — always available: popularity, loyalty, late-night ratio, track novelty
-//   2. Genre signals     — only when matchRate > 0.2; blended in proportionally
-//
-// This ensures a meaningful result even when Spotify returns artists with no genres.
+// ─── Original four archetype scoring ─────────────────────────────────────────
 
 function scoreHypeArchitect(
   avgPopularity: number, loyalty: number,
   genreEnergy: number, matchRate: number,
 ): number {
-  // Behavior: mainstream taste + low loyalty (always moving to the next thing)
   const behavior = clamp(avgPopularity / 100) * 0.55 + clamp((60 - loyalty) / 60) * 0.45
-  // Genre boost: high energy genres push score up
   const genre = matchRate > 0.2 ? clamp((genreEnergy - 0.5) / 0.5) : 0
   return behavior * (1 - matchRate * 0.4) + genre * (matchRate * 0.4)
 }
@@ -251,7 +241,6 @@ function scoreSoftLaunch(
   loyalty: number, avgPopularity: number,
   genreAcoustic: number, matchRate: number,
 ): number {
-  // Behavior: high loyalty (keeps returning) + mid popularity (not chasing mainstream)
   const behavior = clamp(loyalty / 100) * 0.60 + clamp((75 - Math.abs(avgPopularity - 55)) / 75) * 0.40
   const genre = matchRate > 0.2 ? clamp(genreAcoustic / 0.7) : 0
   return behavior * (1 - matchRate * 0.35) + genre * (matchRate * 0.35)
@@ -261,29 +250,77 @@ function scoreLateNightDriver(
   lateNightRatio: number, loyalty: number, avgPopularity: number,
   genreValence: number, matchRate: number,
 ): number {
-  // Behavior: late-night listening is the primary signal; mid loyalty + mid popularity
   const lateNight = clamp(lateNightRatio / 0.3) * 0.50
   const behavior  = clamp((70 - Math.abs(loyalty - 45)) / 70) * 0.25 +
                     clamp((80 - Math.abs(avgPopularity - 45)) / 80) * 0.25
-  // Genre: lower valence genres (introspective/emotional) boost this
   const genre = matchRate > 0.2 ? clamp((0.65 - genreValence) / 0.5) : 0
   return (lateNight + behavior) * (1 - matchRate * 0.3) + genre * (matchRate * 0.3)
 }
 
 function scoreTheStatic(
   loyalty: number, avgPopularity: number,
-  trackNoveltyRatio: number,  // fraction of short-term artists not in medium-term
+  trackNoveltyRatio: number,
   genreEntropy: number, totalGenres: number, matchRate: number,
 ): number {
-  // Behavior: low loyalty + low-mid popularity + high track novelty (always finding new artists)
   const behavior = clamp((50 - loyalty) / 50) * 0.40 +
                    clamp(trackNoveltyRatio)    * 0.35 +
                    clamp((65 - avgPopularity) / 65) * 0.25
-  // Genre: wide genre spread is a strong confirming signal when available
   const genre = matchRate > 0.2
     ? clamp(genreEntropy / 4.5) * 0.5 + clamp(totalGenres / 25) * 0.5
     : 0
   return behavior * (1 - matchRate * 0.45) + genre * (matchRate * 0.45)
+}
+
+// ─── New four archetype scoring ───────────────────────────────────────────────
+
+// Completionist: extreme loyalty + near-zero track novelty, genre-agnostic depth
+function scoreCompletionist(
+  loyalty: number,
+  trackNoveltyRatio: number,
+  avgPopularity: number,
+): number {
+  const loyaltyScore   = clamp(loyalty / 100)
+  const stabilityScore = clamp(1 - trackNoveltyRatio * 5)  // strongly penalises novelty > 0.2
+  const underground    = clamp((70 - avgPopularity) / 70)
+  return loyaltyScore * 0.55 + stabilityScore * 0.35 + underground * 0.10
+}
+
+// Signal: low popularity + moderate genre cohesion (underground but not chaotic)
+function scoreSignal(
+  avgPopularity: number,
+  genreEntropy:  number,
+  trackNoveltyRatio: number,
+  matchRate: number,
+): number {
+  const underground = clamp((45 - avgPopularity) / 45)
+  const cohesion    = matchRate > 0.2 ? clamp((3.5 - genreEntropy) / 3.5) : 0.35
+  const stability   = clamp(1 - trackNoveltyRatio)
+  return underground * 0.55 + cohesion * 0.30 + stability * 0.15
+}
+
+// Mainframe: high popularity + focused genre taste (calibrated to the cultural moment)
+function scoreMainframe(
+  avgPopularity: number,
+  genreEntropy:  number,
+  trackNoveltyRatio: number,
+  matchRate: number,
+): number {
+  const mainstream = clamp((avgPopularity - 50) / 50)
+  const focused    = matchRate > 0.2 ? clamp((3.0 - genreEntropy) / 3.0) : 0
+  const stability  = clamp(1 - trackNoveltyRatio)
+  return mainstream * 0.55 + focused * 0.30 + stability * 0.15
+}
+
+// Time Capsule: same artists persist from short-term all the way to long-term
+function scoreTimeCapsule(
+  loyalty: number,
+  longShortArtistOverlap: number,
+  trackNoveltyRatio: number,
+): number {
+  const persistence  = clamp(longShortArtistOverlap * 3)  // 0.33 overlap → score 1.0
+  const loyaltyBoost = clamp(loyalty / 100)
+  const stability    = clamp(1 - trackNoveltyRatio)
+  return persistence * 0.55 + loyaltyBoost * 0.25 + stability * 0.20
 }
 
 // ─── Listener profile ─────────────────────────────────────────────────────────
@@ -294,31 +331,26 @@ export function computeListenerProfile(
   longTracks:   { id: string; popularity: number }[],
   topArtists:   SpotifyArtist[],
 ): ListenerProfile {
-  // Discovery — inverse of average popularity
   const artistPopAvg = avg(topArtists.map(a => a.popularity))
   const trackPopAvg  = avg(mediumTracks.map(t => t.popularity))
   const discovery    = clamp100(100 - (artistPopAvg * 0.6 + trackPopAvg * 0.4))
 
-  // Loyalty — Jaccard overlap between short-term and long-term track ids
   const shortIds = new Set(shortTracks.map(t => t.id))
   const longIds  = new Set(longTracks.map(t => t.id))
   const intersection = [...shortIds].filter(id => longIds.has(id)).length
   const union        = new Set([...shortIds, ...longIds]).size
   const loyalty      = clamp100(union > 0 ? (intersection / union) * 100 * 3.5 : 50)
 
-  // Emotional range — genre diversity as a proxy (more genres = wider palette)
-  const allGenres = new Set(safeGenres(topArtists))
+  const allGenres      = new Set(safeGenres(topArtists))
   const emotionalRange = clamp100(Math.min(allGenres.size * 3.5, 99))
 
-  // Intensity — popularity inversion + genre energy score
-  const inferred = inferFeaturesFromGenres(topArtists)
+  const inferred  = inferFeaturesFromGenres(topArtists)
   const intensity = clamp100((inferred.energy * 0.6 + (1 - artistPopAvg / 100) * 0.4) * 100)
 
   return { discovery, loyalty, emotionalRange, intensity }
 }
 
-// ─── Drift detection (genre-based) ───────────────────────────────────────────
-// Compare short-term vs medium-term top tracks by popularity + artist overlap
+// ─── Drift detection ──────────────────────────────────────────────────────────
 
 export function detectDrift(
   shortTracks:  { id: string; popularity: number; artists: { id: string; name: string }[] }[],
@@ -330,17 +362,13 @@ export function detectDrift(
 
   const shortPop  = avg(shortTracks.map(t => t.popularity))
   const mediumPop = avg(mediumTracks.map(t => t.popularity))
-  const popDelta  = shortPop - mediumPop  // positive = trending more mainstream recently
+  const popDelta  = shortPop - mediumPop
 
-  // Artist novelty: how many short-term artists aren't in medium-term
-  const medArtistIds = new Set(mediumTracks.flatMap(t => t.artists.map(a => a.id)))
+  const medArtistIds   = new Set(mediumTracks.flatMap(t => t.artists.map(a => a.id)))
   const newArtistCount = shortTracks.filter(t => t.artists.some(a => !medArtistIds.has(a.id))).length
-  const noveltyRatio = newArtistCount / shortTracks.length
+  const noveltyRatio   = newArtistCount / shortTracks.length
 
-  const popShift    = Math.abs(popDelta) > 8
-  const artistShift = noveltyRatio > 0.35
-
-  const detected = popShift && artistShift
+  const detected = Math.abs(popDelta) > 8 && noveltyRatio > 0.35
 
   if (!detected) {
     return { detected: false, direction: null, weeksAgo: 4, valenceDelta: popDelta / 100, energyDelta: noveltyRatio, line: '' }
@@ -363,14 +391,7 @@ export function detectDrift(
     line = `You've been returning to familiar names lately — fewer new discoveries, more depth on what you know.`
   }
 
-  return {
-    detected: true,
-    direction,
-    weeksAgo:     4,
-    valenceDelta: popDelta / 100,
-    energyDelta:  noveltyRatio,
-    line,
-  }
+  return { detected: true, direction, weeksAgo: 4, valenceDelta: popDelta / 100, energyDelta: noveltyRatio, line }
 }
 
 // ─── Late-night ratio ─────────────────────────────────────────────────────────
@@ -392,35 +413,46 @@ export function classify(
   mediumTracks:   { id: string; name: string; popularity: number; artists: { id: string; name: string }[] }[],
   longTracks:     { id: string; name: string; popularity: number; artists: { id: string; name: string }[] }[],
   lateNightRatio: number,
+  skipRate = 0,   // fraction of plays that ended with a skip; 0 when unavailable (Spotify API path)
 ): ScoringResult {
-  const inferred      = inferFeaturesFromGenres(topArtists)
-  const genreCounts   = extractGenreCounts(topArtists)
-  const genreEntropy  = shannonEntropy(genreCounts)
-  const totalGenres   = genreCounts.length
+  const inferred     = inferFeaturesFromGenres(topArtists)
+  const genreCounts  = extractGenreCounts(topArtists)
+  const genreEntropy = shannonEntropy(genreCounts)
+  const totalGenres  = genreCounts.length
   const avgPopularity = avg(topArtists.map(a => a.popularity))
 
   const listenerProfile = computeListenerProfile(shortTracks, mediumTracks, longTracks, topArtists)
 
-  // Track novelty: fraction of short-term artists absent from medium-term (measures restlessness)
-  const medArtistIds     = new Set(mediumTracks.flatMap(t => t.artists.map(a => a.id)))
+  // Track novelty: fraction of short-term artists absent from medium-term
+  const medArtistIds      = new Set(mediumTracks.flatMap(t => t.artists.map(a => a.id)))
   const trackNoveltyRatio = shortTracks.length > 0
     ? shortTracks.filter(t => t.artists.some(a => !medArtistIds.has(a.id))).length / shortTracks.length
+    : 0
+
+  // Long-short artist overlap: how many short-term artists also appear in long-term
+  const longArtistIds          = new Set(longTracks.flatMap(t => t.artists.map(a => a.id)))
+  const shortArtistList        = shortTracks.flatMap(t => t.artists.map(a => a.id))
+  const longShortArtistOverlap = shortArtistList.length > 0
+    ? shortArtistList.filter(id => longArtistIds.has(id)).length / shortArtistList.length
     : 0
 
   const signals = {
     highGenreEntropy: genreEntropy > 3.5,
     lateNight:        lateNightRatio > 0.25,
-    highSkip:         false,
+    highSkip:         skipRate > 0.30,
   }
 
-  const mr = inferred.matchRate  // 0 when no genres, up to 1 when all match
+  const mr = inferred.matchRate
 
-  // Score all four archetypes
   const typeScores: Record<ArchetypeKey, number> = {
     'hype-architect':    scoreHypeArchitect(avgPopularity, listenerProfile.loyalty, inferred.energy, mr),
     'soft-launch':       scoreSoftLaunch(listenerProfile.loyalty, avgPopularity, inferred.acousticness, mr),
     'late-night-driver': scoreLateNightDriver(lateNightRatio, listenerProfile.loyalty, avgPopularity, inferred.valence, mr),
     'the-static':        scoreTheStatic(listenerProfile.loyalty, avgPopularity, trackNoveltyRatio, genreEntropy, totalGenres, mr),
+    'the-completionist': scoreCompletionist(listenerProfile.loyalty, trackNoveltyRatio, avgPopularity),
+    'the-signal':        scoreSignal(avgPopularity, genreEntropy, trackNoveltyRatio, mr),
+    'the-mainframe':     scoreMainframe(avgPopularity, genreEntropy, trackNoveltyRatio, mr),
+    'the-time-capsule':  scoreTimeCapsule(listenerProfile.loyalty, longShortArtistOverlap, trackNoveltyRatio),
   }
 
   const ranked = (Object.entries(typeScores) as [ArchetypeKey, number][])
@@ -429,7 +461,15 @@ export function classify(
   const archetype       = ranked[0][0]
   const shadowArchetype = ranked[1][0]
 
-  // Top artist names + top genres
+  const listenerDNA = computeListenerDNA(
+    lateNightRatio,
+    listenerProfile.loyalty,
+    trackNoveltyRatio,
+    listenerProfile.discovery,
+    listenerProfile.intensity,
+    inferred.acousticness,
+  )
+
   const topArtistNames = topArtists.slice(0, 5).map(a => a.name)
   const genreFreq: Record<string, number> = {}
   for (const genre of safeGenres(topArtists)) {
@@ -440,8 +480,7 @@ export function classify(
     .slice(0, 5)
     .map(([g]) => g)
 
-  // Waveform — use popularity curve of medium-term tracks as a proxy for mood variation
-  const waveformTracks = mediumTracks.slice(0, 24)
+  const waveformTracks  = mediumTracks.slice(0, 24)
   const waveformValence = waveformTracks.map(t => clamp(t.popularity / 100 * 0.6 + inferred.valence * 0.4))
   const waveformEnergy  = waveformTracks.map((_, i) =>
     clamp(inferred.energy * 0.7 + Math.sin(i * 0.8) * 0.15 + 0.15)
@@ -459,6 +498,7 @@ export function classify(
     },
     signals,
     listenerProfile,
+    listenerDNA,
     drift: detectDrift(shortTracks, mediumTracks),
     dataHighlight: {
       genres:       totalGenres,

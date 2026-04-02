@@ -29,6 +29,12 @@ export default function Landing() {
     router.push('/loading')
   }
 
+  function uploadData() {
+    sessionStorage.clear()
+    sessionStorage.setItem('handle', handle.trim() || 'you')
+    router.push('/upload')
+  }
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 relative overflow-hidden">
       <div
@@ -95,10 +101,20 @@ export default function Landing() {
           <span className="opacity-40 group-hover:opacity-100 transition-opacity">→</span>
         </button>
 
-        {/* Secondary CTA — demo */}
+        {/* Secondary CTA — export upload */}
+        <button
+          onClick={uploadData}
+          className="group w-full flex items-center justify-between border border-[#2a2a2a] px-8 py-3 text-xs tracking-[0.15em] uppercase transition-all duration-200 hover:border-[#f0ede6] mb-3 opacity-60 hover:opacity-100"
+          style={{ fontFamily: 'Courier New, monospace' }}
+        >
+          Upload Spotify data export
+          <span className="opacity-30 group-hover:opacity-80 transition-opacity">→</span>
+        </button>
+
+        {/* Tertiary CTA — demo */}
         <button
           onClick={tryDemo}
-          className="w-full text-xs opacity-30 hover:opacity-60 transition-opacity py-2 tracking-widest uppercase"
+          className="w-full text-xs opacity-25 hover:opacity-50 transition-opacity py-2 tracking-widest uppercase"
           style={{ fontFamily: 'Courier New, monospace' }}
         >
           or try demo first
@@ -115,8 +131,10 @@ export default function Landing() {
         aria-hidden
       >
         <span>THE LATE NIGHT DRIVER</span>
-        <span>THE HYPE ARCHITECT</span>
-        <span className="hidden sm:block">THE SOFT LAUNCH</span>
+        <span className="hidden sm:block">THE HYPE ARCHITECT</span>
+        <span className="hidden md:block">THE COMPLETIONIST</span>
+        <span className="hidden md:block">THE SIGNAL</span>
+        <span className="hidden lg:block">THE MAINFRAME</span>
         <span className="hidden sm:block">THE STATIC</span>
       </div>
     </main>

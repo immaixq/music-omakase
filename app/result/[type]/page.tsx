@@ -12,10 +12,14 @@ import { CurrentStateReveal } from '@/components/CurrentStateReveal'
 type Phase = 'name' | 'confession' | 'shadow' | 'full' | 'profile' | 'letter' | 'card'
 
 const OPPOSITE: Record<ArchetypeKey, ArchetypeKey> = {
-  'late-night-driver': 'hype-architect',
-  'hype-architect':    'late-night-driver',
-  'soft-launch':       'the-static',
-  'the-static':        'soft-launch',
+  'late-night-driver':  'hype-architect',
+  'hype-architect':     'late-night-driver',
+  'soft-launch':        'the-static',
+  'the-static':         'soft-launch',
+  'the-completionist':  'the-signal',
+  'the-signal':         'the-completionist',
+  'the-mainframe':      'the-time-capsule',
+  'the-time-capsule':   'the-mainframe',
 }
 
 const PROFILE_LABELS: Record<keyof ListenerProfile, { label: string; low: string; high: string }> = {
@@ -101,6 +105,23 @@ export default function ResultPage() {
           style={{ fontFamily: 'Georgia, serif', letterSpacing: '-0.02em', color: archetype.color }}>
           {archetype.name}
         </motion.h1>
+
+        {/* Listener DNA tag */}
+        {result.listenerDNA && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="mb-7">
+            <p className="text-xs tracking-[0.2em] uppercase opacity-25 mb-1"
+              style={{ fontFamily: 'Courier New, monospace' }}>
+              listener DNA
+            </p>
+            <p className="text-base font-medium"
+              style={{ fontFamily: 'Georgia, serif', color: archetype.color, opacity: 0.85 }}>
+              {result.listenerDNA.tag}
+            </p>
+          </motion.div>
+        )}
 
         {/* Confession */}
         <AnimatePresence>
@@ -374,6 +395,7 @@ function DataReceipt({ result }: { result: AnalyzeResult }) {
   const rows: [string, string][] = [
     ['archetype',       result.archetype],
     ['shadow',          result.shadowArchetype],
+    ...(result.listenerDNA ? [['listener DNA', result.listenerDNA.tag] as [string, string]] : []),
     ['discovery',       `${result.listenerProfile.discovery} / 100`],
     ['loyalty',         `${result.listenerProfile.loyalty} / 100`],
     ['emotional range', `${result.listenerProfile.emotionalRange} / 100`],

@@ -9,13 +9,16 @@ import { getConfessionLine, archetypes } from '@/lib/archetypes'
 import { SHADOW_LINES } from '@/lib/shadowLines'
 import { selectLetter } from '@/lib/letter'
 import { computeCurrentState } from '@/lib/currentState'
+import type { ExportPayload } from '@/lib/exportParser'
 
 export async function POST(req: NextRequest) {
-  const body   = await req.json().catch(() => ({}))
-  const token  = typeof body.token  === 'string' ? body.token  : null
-  const handle = typeof body.handle === 'string' ? body.handle : 'you'
+  const body        = await req.json().catch(() => ({}))
+  const token       = typeof body.token  === 'string' ? body.token  : null
+  const handle      = typeof body.handle === 'string' ? body.handle : 'you'
+  const exportData  = body.exportData as ExportPayload | undefined
 
-  if (!token) return NextResponse.json(getMockResult(handle))
+  if (exportData) return NextResponse.json(await analyseExport(exportData, handle))
+  if (!token)     return NextResponse.json(getMockResult(handle))
 
   try {
     const [me, shortTracks, mediumTracks, longTracks, topArtists, recentlyPlayed] =
@@ -101,6 +104,7 @@ export async function POST(req: NextRequest) {
       highlight,
       handle:          displayHandle,
       listenerProfile: result.listenerProfile,
+      listenerDNA:     result.listenerDNA,
       drift:           result.drift,
       letter:          letterFilled,
       waveformData:    result.waveformData,
@@ -111,6 +115,90 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('[analyze]', err)
     return NextResponse.json(getMockResult(handle))
+  }
+}
+
+// ─── Export data path ─────────────────────────────────────────────────────────
+
+async function analyseExport(data: ExportPayload, handle: string) {
+  try {
+    const artists: SpotifyArtist[] = data.artists.map(a => ({
+      id:         a.id,
+      name:       a.name,
+      genres:     a.genres,
+      popularity: a.popularity,
+    }))
+
+    const lateNightRatio = computeLateNightRatio(data.recentPlays)
+
+    const result = classify(
+      artists,
+      data.shortTracks,
+      data.mediumTracks,
+      data.longTracks,
+      lateNightRatio,
+      data.skipRate,
+    )
+
+    const confessionLine = getConfessionLine(result.archetype, result.signals)
+    const shadowLine     = SHADOW_LINES[result.shadowArchetype]
+    const archetype      = archetypes[result.archetype]
+    const highlight      = buildHighlight(archetype.dataHighlightTemplate, result.dataHighlight)
+
+    const letter = selectLetter({
+      archetype:       result.archetype,
+      valenceAvg:      result.scores.valenceAvg,
+      listenerProfile: result.listenerProfile,
+      drift:           result.drift,
+      genreCount:      result.dataHighlight.genres,
+      lateNight:       result.signals.lateNight,
+      handle,
+      lateNightPct:    result.dataHighlight.lateNightPct,
+    })
+    const letterFilled = letter.map(p => p.replace('{BPM}', '—')) as [string, string, string]
+
+    const proxyFeatures = [{
+      id: 'proxy', energy: result.scores.energyAvg, valence: result.scores.valenceAvg,
+      acousticness: result.scores.acousticAvg, instrumentalness: 0, tempo: 0, speechiness: 0, danceability: 0,
+    }]
+    const safeNum = (v: unknown) => typeof v === 'number' && isFinite(v) ? v : null
+    const shortPops   = data.shortTracks.map(t => safeNum(t.popularity)).filter((v): v is number => v !== null)
+    const mediumPops  = data.mediumTracks.map(t => safeNum(t.popularity)).filter((v): v is number => v !== null)
+    const shortPopAvg  = shortPops.length  ? shortPops.reduce((s, v) => s + v, 0) / shortPops.length  : 50
+    const mediumPopAvg = mediumPops.length ? mediumPops.reduce((s, v) => s + v, 0) / mediumPops.length : 50
+    const popRatio     = (shortPopAvg - mediumPopAvg) / 100
+
+    const baseValence = safeNum(result.scores.valenceAvg) ?? 0.55
+    const baseEnergy  = safeNum(result.scores.energyAvg)  ?? 0.55
+    const shortProxy  = [{ ...proxyFeatures[0], valence: Math.max(0, Math.min(1, baseValence + popRatio * 0.3)), energy: baseEnergy }]
+    const mediumProxy = [{ ...proxyFeatures[0], valence: baseValence, energy: baseEnergy }]
+    const currentState = computeCurrentState(shortProxy, mediumProxy)
+
+    return {
+      archetype:       result.archetype,
+      shadowArchetype: result.shadowArchetype,
+      confessionLine,
+      shadowLine,
+      highlight,
+      handle,
+      listenerProfile: result.listenerProfile,
+      listenerDNA:     result.listenerDNA,
+      drift:           result.drift,
+      letter:          letterFilled,
+      waveformData:    result.waveformData,
+      currentState,
+      topArtistNames:  result.topArtistNames,
+      topGenres:       result.topGenres,
+      // Export-only extras shown on result page
+      exportMeta: {
+        totalHours:  data.totalHours,
+        historyDays: data.historyDays,
+        skipRate:    Math.round(data.skipRate * 100),
+      },
+    }
+  } catch (err) {
+    console.error('[analyze/export]', err)
+    return getMockResult(handle)
   }
 }
 

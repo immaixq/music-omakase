@@ -138,6 +138,122 @@ const TEMPLATES: LetterTemplate[] = [
       `Whatever changed, the music changed with it. It always does.`,
     ],
   },
+
+  // ─── The Completionist ────────────────────────────────────────────────────
+  {
+    archetype: 'the-completionist', valenceHigh: null, loyaltyHigh: true,
+    driftDetected: null, lateNight: null,
+    paragraphs: [
+      `You haven't finished with these artists yet.`,
+      `Your loyalty scores sit in the top range — you return to the same names across every time window, not because you're stuck, but because there's still more to find. Most listeners skim the surface of an artist's catalog. You go all the way down.`,
+      `There are tracks in your history that most fans of the same artists have never played. You found them. You went back.`,
+    ],
+  },
+  {
+    archetype: 'the-completionist', valenceHigh: null, loyaltyHigh: null,
+    driftDetected: null, lateNight: true,
+    paragraphs: [
+      `Late at night, you replay the same songs.`,
+      `Not because nothing else exists — because you're still inside them. Your track novelty is remarkably low. You are not restless. You are thorough. There's a difference, and most people can't tell them apart.`,
+      `The artists you know best, you know better than most people who claim to love them.`,
+    ],
+  },
+  {
+    archetype: 'the-completionist', valenceHigh: null, loyaltyHigh: null,
+    driftDetected: null, lateNight: null,
+    paragraphs: [
+      `You commit to artists the way some people commit to places.`,
+      `Your new artist discovery rate is among the lowest we see — not because nothing interests you, but because you're not done with what you already have. Every album, every B-side, every live version that surfaced five years ago and never got enough plays.`,
+      `When you finally move on from an artist, it means something. The bar is very high. Most of them don't clear it.`,
+    ],
+  },
+
+  // ─── The Signal ──────────────────────────────────────────────────────────
+  {
+    archetype: 'the-signal', valenceHigh: null, loyaltyHigh: null,
+    driftDetected: null, lateNight: null,
+    paragraphs: [
+      `You are not trying to be ahead of the curve.`,
+      `You just are. Your average artist popularity sits well below the mainstream — not because you're making a point, but because something real caught your attention before anyone else got there. The algorithm doesn't know what to do with you, which is why it keeps recommending you to people.`,
+      `In six months, a few of these artists will be everywhere. You'll remember when it was just yours.`,
+    ],
+  },
+  {
+    archetype: 'the-signal', valenceHigh: null, loyaltyHigh: null,
+    driftDetected: true, lateNight: null,
+    paragraphs: [
+      `Something new arrived in the last four weeks.`,
+      `Your popularity average dropped, which means you've been digging further than usual — artists with smaller followings, newer releases, things the algorithm hasn't indexed yet. This is what you do when something shifts internally. The music gets more specific.`,
+      `The data calls it a drift. You'd just call it finding the next thing.`,
+    ],
+  },
+  {
+    archetype: 'the-signal', valenceHigh: null, loyaltyHigh: null,
+    driftDetected: null, lateNight: true,
+    paragraphs: [
+      `Most of your discoveries happen at night.`,
+      `That's when you're actually listening — not in the background, not on shuffle, but deliberately, in sequence, the way the artist intended. Your underground score reflects a consistent reach toward things most people haven't found. That's not a personality — it's a practice.`,
+      `The artists you love right now will be someone else's discovery eventually. You won't resent it. You'll just already be somewhere else.`,
+    ],
+  },
+
+  // ─── The Mainframe ────────────────────────────────────────────────────────
+  {
+    archetype: 'the-mainframe', valenceHigh: null, loyaltyHigh: null,
+    driftDetected: null, lateNight: null,
+    paragraphs: [
+      `Your taste is synchronized with the cultural moment.`,
+      `Not because you're following it — because you're part of it. The artists you listen to sit at peak popularity. The genres you gravitate toward are the ones everyone ends up listening to. You're not chasing the wave; you're just already on it, naturally, without trying.`,
+      `If your Spotify history were public, it would look like a cultural index. The algorithm loves you. You are its ideal case.`,
+    ],
+  },
+  {
+    archetype: 'the-mainframe', valenceHigh: null, loyaltyHigh: true,
+    driftDetected: null, lateNight: null,
+    paragraphs: [
+      `You return to what works, and what works happens to be popular.`,
+      `Your loyalty score is high — you're not constantly chasing new things. When you find an artist who resonates, you stay. And the artists you stay with tend to have large audiences, not because you sought them out for that reason, but because real resonance tends to reach a lot of people.`,
+      `There's a version of this archetype that's cynical. Yours isn't. The mainstream, when it's good, is good for a reason.`,
+    ],
+  },
+  {
+    archetype: 'the-mainframe', valenceHigh: null, loyaltyHigh: null,
+    driftDetected: true, lateNight: null,
+    paragraphs: [
+      `Something shifted, and you moved with it.`,
+      `Your recent listening has tracked toward higher popularity artists than your six-month baseline. You didn't resist it — why would you? When something becomes culturally significant, you're already there. The shift wasn't trend-chasing. It was alignment.`,
+      `The data says your taste is calibrated. That's not a criticism. It takes a certain kind of ear to track the moment accurately.`,
+    ],
+  },
+
+  // ─── The Time Capsule ─────────────────────────────────────────────────────
+  {
+    archetype: 'the-time-capsule', valenceHigh: null, loyaltyHigh: true,
+    driftDetected: null, lateNight: null,
+    paragraphs: [
+      `The artists you're listening to today are the same ones you were listening to a year ago.`,
+      `That overlap between your short-term and long-term listening is significant. Most people cycle through artists faster than this. You don't. When you find something real, it stays. Not as a habit — as a relationship.`,
+      `There are probably songs in your history that take you back to a specific moment immediately, without warning. That's not nostalgia. That's a high-fidelity emotional record.`,
+    ],
+  },
+  {
+    archetype: 'the-time-capsule', valenceHigh: null, loyaltyHigh: null,
+    driftDetected: null, lateNight: true,
+    paragraphs: [
+      `At night, you go back.`,
+      `Your long-term and short-term listening overlap in a way that's unusual — the same artists, the same songs, across months and months. Late at night, those songs do something specific. They hold a version of you that still exists somewhere in the data.`,
+      `You're not stuck. You're keeping something alive that most people let go of too quickly.`,
+    ],
+  },
+  {
+    archetype: 'the-time-capsule', valenceHigh: null, loyaltyHigh: null,
+    driftDetected: null, lateNight: null,
+    paragraphs: [
+      `Some of your favorite songs, you've heard hundreds of times.`,
+      `You're still finding things in them. That's what the high long-term retention rate means — you're not replaying out of inertia, you're going deeper. Most listeners treat songs as disposable. You treat them as documents. The same document, revisited, says something different depending on when you open it.`,
+      `Your music didn't forget who you were. Neither did you.`,
+    ],
+  },
 ]
 
 function score(template: LetterTemplate, ctx: LetterContext): number {
