@@ -4,12 +4,12 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 const STEPS = [
-  'scanning your last 6 months...',
+  'reading the last 6 months...',
   'finding the 2am patterns...',
-  'reading the songs you played on repeat...',
-  'cross-referencing what you skip...',
-  'running the audit...',
-  'almost done profiling you...',
+  'listening to what you played on repeat...',
+  'noticing what you skipped...',
+  'piecing together who you are...',
+  'almost ready to show you...',
 ]
 
 const STEP_MS = 1100
@@ -68,7 +68,7 @@ export default function LoadingPage() {
           className="text-xs tracking-[0.3em] uppercase mb-2 opacity-30"
           style={{ fontFamily: 'Courier New, monospace' }}
         >
-          VIBE-ID · AUDIT IN PROGRESS
+          VIBE·ID · READING YOUR MUSIC
         </p>
         {timeNote && (
           <p

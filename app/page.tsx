@@ -52,7 +52,7 @@ export default function Landing() {
           className="text-xs tracking-[0.3em] uppercase mb-16 opacity-50"
           style={{ fontFamily: 'Courier New, monospace' }}
         >
-          VIBE-ID · AUDIT SYSTEM
+          VIBE·ID · MUSIC IDENTITY
         </p>
 
         <h1
